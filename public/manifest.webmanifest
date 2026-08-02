@@ -1,0 +1,14 @@
+{
+  "name": "Ranch Texas — Control de acceso",
+  "short_name": "Ranch Escaneo",
+  "description": "Escaneo de manillas y control de acceso del Parque Ranch Texas",
+  "start_url": "/escaneo",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F4EAD7",
+  "theme_color": "#3B2416",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

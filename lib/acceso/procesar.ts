@@ -1,7 +1,7 @@
 import { prisma } from "../db";
 import { verificarPayload } from "../qr/firma";
 import { inicioDelDiaOperativo } from "../tiempo";
-import { evaluarAcceso, textoMotivo, type ContextoAcceso, type ReglaPunto } from "./validar";
+import { evaluarAcceso, textoMotivo, type ContextoAcceso, type MotivoDenegacion, type ReglaPunto } from "./validar";
 
 export interface ResultadoEscaneo {
   permitido: boolean;
@@ -22,14 +22,41 @@ export interface ResultadoEscaneoError {
  * Procesa un escaneo: verifica firma, aplica las reglas del punto, registra el acceso
  * y devuelve el resultado para el semáforo. Núcleo testeable sin HTTP.
  */
+export interface MetaEscaneo {
+  idCliente?: string | null; // idempotencia de la cola offline
+  escaneadoEn?: Date; // hora real del evento en el dispositivo
+  sincronizado?: boolean;
+}
+
 export async function procesarEscaneo(
   usuarioId: string | null,
   puntoControlId: string,
   payload: string,
   dispositivo?: string | null,
+  meta?: MetaEscaneo,
 ): Promise<ResultadoEscaneo | ResultadoEscaneoError> {
   const punto = await prisma.puntoControl.findUnique({ where: { id: puntoControlId } });
   if (!punto || !punto.activo) return { error: "Punto de control inválido." };
+
+  // Idempotencia: si este escaneo ya fue registrado (misma id_cliente), no duplicar.
+  if (meta?.idCliente) {
+    const existe = await prisma.acceso.findUnique({
+      where: { id_cliente: meta.idCliente },
+      include: { manilla: { include: { venta_detalle: { include: { tipo_visitante: true } } } } },
+    });
+    if (existe) {
+      return {
+        permitido: existe.resultado === "permitido",
+        motivo: existe.motivo_denegacion ? textoMotivo(existe.motivo_denegacion as MotivoDenegacion) : undefined,
+        sentido: existe.sentido,
+        puntoNombre: punto.nombre,
+        manilla: existe.manilla ? { consecutivo: existe.manilla.consecutivo, tipo: existe.manilla.es_bebe ? "BEBÉ" : existe.manilla.venta_detalle.tipo_visitante.nombre } : null,
+        aforoActual: 0,
+        aforoMaximo: punto.aforo_maximo,
+        acceso_id: existe.id,
+      };
+    }
+  }
 
   const regla: ReglaPunto = {
     tipo_regla: punto.tipo_regla,
@@ -97,8 +124,10 @@ export async function procesarEscaneo(
       motivo_denegacion: res.motivo ?? null,
       escaneado_por: usuarioId,
       dispositivo: dispositivo ?? null,
-      escaneado_en: ahora,
-      sincronizado: true,
+      escaneado_en: meta?.escaneadoEn ?? ahora,
+      registrado_en: ahora,
+      sincronizado: meta?.sincronizado ?? true,
+      id_cliente: meta?.idCliente ?? null,
     },
   });
 

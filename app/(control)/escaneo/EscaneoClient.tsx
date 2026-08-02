@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { escanear } from "./actions";
 import type { ResultadoEscaneo } from "@/lib/acceso/procesar";
+import { encolar, sincronizarCola, tamanoCola } from "@/lib/offline/cola";
 
 interface Punto {
   id: string;
@@ -26,6 +27,8 @@ export default function EscaneoClient({ usuario, puntos }: { usuario: string; pu
   const [historial, setHistorial] = useState<{ txt: string; ok: boolean }[]>([]);
   const [procesando, setProcesando] = useState(false);
   const [camara, setCamara] = useState(false);
+  const [pendientes, setPendientes] = useState(0);
+  const [offline, setOffline] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const ultimo = useRef<{ payload: string; t: number }>({ payload: "", t: 0 });
@@ -40,14 +43,44 @@ export default function EscaneoClient({ usuario, puntos }: { usuario: string; pu
     ultimo.current = { payload, t: ahora };
 
     setProcesando(true);
-    const r = await escanear(punto.id, payload.trim());
-    setResultado(r);
-    if ("permitido" in r) {
-      const etq = r.manilla ? `${r.manilla.consecutivo} · ${r.manilla.tipo}` : "—";
-      setHistorial((h) => [{ txt: `${r.permitido ? "✓" : "✗"} ${etq}${r.motivo ? " · " + r.motivo : ""}`, ok: r.permitido }, ...h].slice(0, 8));
+    const limpio = payload.trim();
+    const idCliente = globalThis.crypto?.randomUUID?.() ?? String(ahora);
+
+    const guardarOffline = () => {
+      encolar({ id_cliente: idCliente, punto_control_id: punto.id, payload: limpio, escaneado_en: new Date().toISOString() });
+      setPendientes(tamanoCola());
+      setOffline(true);
+      setResultado(null);
+      setHistorial((h) => [{ txt: "⏳ En cola (sin conexión)", ok: true }, ...h].slice(0, 8));
+    };
+
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      guardarOffline();
+      setProcesando(false); focus(); return;
+    }
+
+    try {
+      const r = await escanear(punto.id, limpio);
+      setOffline(false);
+      setResultado(r);
+      if ("permitido" in r) {
+        const etq = r.manilla ? `${r.manilla.consecutivo} · ${r.manilla.tipo}` : "—";
+        setHistorial((h) => [{ txt: `${r.permitido ? "✓" : "✗"} ${etq}${r.motivo ? " · " + r.motivo : ""}`, ok: r.permitido }, ...h].slice(0, 8));
+      }
+    } catch {
+      guardarOffline(); // el servidor no respondió → a la cola
     }
     setProcesando(false);
     focus();
+  }
+
+  async function sincronizar() {
+    try {
+      const { procesados } = await sincronizarCola();
+      setPendientes(tamanoCola());
+      if (procesados > 0) setHistorial((h) => [{ txt: `↑ ${procesados} sincronizados`, ok: true }, ...h].slice(0, 8));
+      setOffline(false);
+    } catch { /* sigue en cola */ }
   }
 
   // Cámara con BarcodeDetector (mejora progresiva; si no está, se usa el lector manual/USB).
@@ -85,6 +118,17 @@ export default function EscaneoClient({ usuario, puntos }: { usuario: string; pu
   }, [camara, punto]);
 
   useEffect(() => { if (punto) focus(); }, [punto]);
+
+  // PWA + sincronización de la cola offline.
+  useEffect(() => {
+    setPendientes(tamanoCola());
+    if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
+    const onOnline = () => void sincronizar();
+    window.addEventListener("online", onOnline);
+    void sincronizar();
+    return () => window.removeEventListener("online", onOnline);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // --- Selección de punto ---
   if (!punto) {
@@ -129,6 +173,13 @@ export default function EscaneoClient({ usuario, puntos }: { usuario: string; pu
           Cambiar
         </button>
       </header>
+
+      {pendientes > 0 && (
+        <div className="mb-3 flex items-center justify-between rounded-lg bg-ranch-dorado/20 px-3 py-2 text-sm text-ranch-marron">
+          <span>⏳ {pendientes} en cola{offline ? " · sin conexión" : ""}</span>
+          <button onClick={() => void sincronizar()} className="rounded bg-ranch-marron px-3 py-1 text-xs font-semibold text-ranch-crema">Sincronizar</button>
+        </div>
+      )}
 
       {punto.aforo_maximo != null && (
         <div className="mb-3 rounded-lg bg-white p-3 text-center">

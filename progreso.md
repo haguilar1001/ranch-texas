@@ -13,7 +13,29 @@ Estado por fase. Se entrega una fase a la vez; no se avanza sin visto bueno del 
 | F6 | Gastos y rubros con soportes | ✅ Completada |
 | F7 | Reportes de ventas mes/año y comparativos | ✅ Completada |
 | F8 | Vistas `analitica`, usuario read-only y export para Power BI | ✅ Completada |
-| F9 | Modo offline, respaldos, despliegue y manual de usuario | ⬜ Pendiente |
+| F9 | Modo offline, respaldos, despliegue y manual de usuario | ✅ Completada |
+
+## F9 — Cierre: offline, respaldos, deploy y manual (completada, verificada)
+
+- [x] **Escáner offline (PWA):** cola en `localStorage` (`lib/offline/cola.ts`), endpoint
+      `/api/accesos/sync` **idempotente por `id_cliente`**, sincronización automática al volver la red
+      + botón manual y contador de pendientes. Manifest + service worker + icono.
+- [x] `procesarEscaneo` acepta metadatos offline (id_cliente, hora real del evento, sincronizado)
+      y no duplica accesos ya registrados.
+- [x] **Middleware** de autenticación (defensa en profundidad) para rutas protegidas.
+- [x] **Respaldos** documentados (`docs/respaldos.md`): backups de Railway + pg_dump/restore.
+- [x] **Manual de usuario** (`docs/manual.md`).
+- [x] Verificado con `scripts/verificar-f9.ts` (sync idempotente, hora real) y **build de producción
+      exitoso** (20 rutas + middleware edge). 51 tests, typecheck limpio.
+
+Pendiente operativo (del responsable, no de código):
+- En Railway: dejar el Start Command en `npx prisma migrate deploy && npm run start` (quitar el seed).
+- Correr `scripts/sql/bi_readonly.sql` con clave real y verificar restauración de backups.
+- Íconos PNG de la PWA y logo definitivo (hoy icono SVG placeholder).
+- Nota: la validación de firma **offline** se hace en el servidor al sincronizar (no se expone el
+  secreto HMAC al dispositivo); el escaneo sin red queda en cola y se resuelve al reconectar.
+
+## 🎉 F0–F9 COMPLETADAS — sistema funcional de punta a punta.
 
 ## F8 — Capa analítica para Power BI (completada, verificada)
 
