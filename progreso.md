@@ -8,12 +8,30 @@ Estado por fase. Se entrega una fase a la vez; no se avanza sin visto bueno del 
 | F1 | Taquilla: venta, cálculo, medios de pago, cortesías con motivo | ✅ Completada |
 | F2 | Manillas con QR firmado + impresión | ✅ Completada |
 | F3 | Escaneo y control de acceso con reglas por punto | ✅ Completada |
-| F4 | Consentimientos digitales con firma | ⬜ Pendiente |
+| F4 | Consentimientos digitales con firma | ✅ Completada |
 | F5 | Caja: apertura, movimientos, cierre y cuadre diario | ⬜ Pendiente |
 | F6 | Gastos y rubros con soportes | ⬜ Pendiente |
 | F7 | Reportes de ventas mes/año y comparativos | ⬜ Pendiente |
 | F8 | Vistas `analitica`, usuario read-only y export para Power BI | ⬜ Pendiente |
 | F9 | Modo offline, respaldos, despliegue y manual de usuario | ⬜ Pendiente |
+
+## F4 — Consentimientos digitales (completada, verificada)
+
+- [x] Validación pura y probada `lib/consentimiento/validar.ts` (5 tests) + núcleo `registrar.ts`.
+- [x] Formulario público `/consentimiento/[payload]` (sin auth): desde el QR de la manilla, datos del
+      firmante, **menor → datos y firma del acudiente**, **lienzo de firma con el dedo**, aceptación
+      expresa (Ley 1581 de 2012), texto legal **versionado** por atracción.
+- [x] Un consentimiento firmado **desbloquea el acceso** a esa atracción (F3 lo reconoce al instante).
+- [x] Se guarda: versión del texto, fecha/hora, IP, dispositivo, atracción y manilla; `es_menor`.
+- [x] Comprobante imprimible/PDF `/consentimiento/comprobante/[id]`.
+- [x] **QR de consentimiento impreso en cada manilla** (el visitante lo escanea con su celular).
+- [x] Verificado con `scripts/verificar-f4.ts`: deniega sin firma → firma → **desbloquea acceso**;
+      menor con acudiente; idempotente. Formulario probado por render (SSR). 43 tests, typecheck limpio.
+
+Pendiente / próximo:
+- Texto legal es **BORRADOR** — debe revisarlo el área legal antes de producción (está versionado en BD).
+- Textos específicos por atracción (hoy usan el general); cargar por atracción cuando estén.
+- **F5: Caja** (apertura ya existe; falta movimientos, cierre con conteo por denominación y cuadre).
 
 ## F3 — Escaneo y control de acceso (completada, verificada)
 

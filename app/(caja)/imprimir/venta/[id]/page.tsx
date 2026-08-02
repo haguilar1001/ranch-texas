@@ -1,4 +1,5 @@
 import { redirect, notFound } from "next/navigation";
+import { headers } from "next/headers";
 import Image from "next/image";
 import { prisma } from "@/lib/db";
 import { obtenerSesion, tieneRol } from "@/lib/auth/sesion";
@@ -25,6 +26,10 @@ export default async function ImprimirVentaPage({ params }: { params: Promise<{ 
   });
   if (!venta) notFound();
 
+  // Origen público para el enlace de consentimiento impreso.
+  const h = await headers();
+  const origin = `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host") ?? "localhost:3000"}`;
+
   // Aplanar manillas con su etiqueta e imagen QR.
   const items = [];
   for (const d of venta.detalle) {
@@ -39,6 +44,7 @@ export default async function ImprimirVentaPage({ params }: { params: Promise<{ 
         emitida: formatearFechaHoraBogota(m.creado_en),
         valida: m.vencimiento ? formatearFechaHoraBogota(m.vencimiento) : "—",
         qr: await qrDataUrl(payload),
+        qrConsent: await qrDataUrl(`${origin}/consentimiento/${payload}`),
       });
     }
   }
@@ -95,6 +101,11 @@ export default async function ImprimirVentaPage({ params }: { params: Promise<{ 
             <p className="mt-1 text-[8px] leading-tight text-ranch-marron/50">
               Conserve su manilla. Términos y condiciones aplican. El reingreso es válido el mismo día.
             </p>
+            <div className="mt-1 border-t border-ranch-marron/15 pt-1">
+              <p className="text-[8px] font-bold text-ranch-marron/70">FIRMA DE CONSENTIMIENTO (karts / motocross)</p>
+              <Image src={it.qrConsent} alt={`Consentimiento ${it.consecutivo}`} width={90} height={90} className="mx-auto" unoptimized />
+              <p className="text-[7px] text-ranch-marron/50">Escanea con tu celular para firmar</p>
+            </div>
           </div>
         ))}
       </div>
