@@ -63,7 +63,8 @@ export default function ConsentimientoForm({
   return (
     <main className="mx-auto max-w-lg p-4">
       <div className="mb-4 rounded-xl border-4 border-ranch-marron bg-white p-4 text-center">
-        <p className="text-xs uppercase tracking-widest text-ranch-dorado">Parque Ranch Texas</p>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo.png" alt="Ranch Texas" className="mx-auto mb-2 h-16 w-auto" />
         <h1 className="text-xl font-black text-ranch-marron">Consentimiento informado</h1>
         <p className="mt-1 text-sm text-ranch-marron/60">Manilla {consecutivo} · {tipo}</p>
       </div>

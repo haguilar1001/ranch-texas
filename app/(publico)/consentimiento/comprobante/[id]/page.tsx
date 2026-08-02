@@ -35,7 +35,8 @@ export default async function ComprobantePage({ params }: { params: Promise<{ id
 
       <div className="rounded-xl border-2 border-ranch-marron/30 bg-white p-5">
         <div className="mb-3 text-center">
-          <p className="text-xs uppercase tracking-widest text-ranch-dorado">Parque Ranch Texas</p>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="Ranch Texas" className="mx-auto mb-2 h-14 w-auto" />
           <h1 className="text-lg font-black text-ranch-marron">{c.texto.titulo}</h1>
           <p className="text-sm text-ranch-marron/60">Versión {c.texto.version} · Atracción: {c.atraccion.nombre}</p>
         </div>

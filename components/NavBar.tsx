@@ -21,9 +21,9 @@ export default async function NavBar() {
   return (
     <header className="sticky top-0 z-20 border-b-2 border-ranch-marron/15 bg-ranch-crema/95 backdrop-blur print:hidden">
       <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-2">
-        <Link href="/" className="flex items-center gap-2">
-          <span className="grid h-9 w-9 place-items-center rounded-lg bg-ranch-marron font-black text-ranch-crema">RT</span>
-          <span className="hidden font-black tracking-tight text-ranch-marron sm:block">RANCH TEXAS</span>
+        <Link href="/" className="flex items-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="Ranch Texas" className="h-9 w-auto" />
         </Link>
 
         <NavLinks links={links} />

@@ -39,10 +39,9 @@ export default async function Home() {
     return (
       <main className="flex min-h-screen items-center justify-center p-6">
         <div className="w-full max-w-md rounded-3xl border-4 border-ranch-marron bg-white p-10 text-center shadow-xl">
-          <span className="mx-auto mb-3 grid h-16 w-16 place-items-center rounded-2xl bg-ranch-marron text-2xl font-black text-ranch-crema">RT</span>
-          <p className="text-xs uppercase tracking-widest text-ranch-dorado">Parque</p>
-          <h1 className="text-4xl font-black text-ranch-marron">RANCH TEXAS</h1>
-          <p className="mt-2 mb-6 text-ranch-marron/60">Sistema de operación</p>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="Ranch Texas" className="mx-auto mb-4 h-28 w-auto" />
+          <p className="mb-6 text-ranch-marron/60">Sistema de operación</p>
           <Link href="/login" className="block rounded-xl bg-ranch-marron px-6 py-3 font-semibold text-ranch-crema hover:bg-ranch-marron-oscuro">
             Ingresar
           </Link>

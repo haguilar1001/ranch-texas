@@ -83,7 +83,8 @@ export default async function ImprimirVentaPage({ params }: { params: Promise<{ 
             key={it.id}
             className="manilla w-[280px] rounded-lg border-2 border-dashed border-ranch-marron/40 bg-white p-3 text-center"
           >
-            <p className="text-xs font-bold tracking-widest text-ranch-marron">{PARQUE}</p>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.png" alt={PARQUE} className="mx-auto mb-1 h-8 w-auto" />
             <div className="my-1 border-y border-ranch-marron/20 py-1">
               <p className="text-2xl font-black text-ranch-marron">{it.etiqueta}</p>
               {it.esCortesia && <p className="text-xs font-bold text-ranch-dorado">CORTESÍA</p>}

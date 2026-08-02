@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   title: "Parque Ranch Texas",
   description: "Sistema de taquilla, control de acceso y operación — Parque Ranch Texas",
   manifest: "/manifest.webmanifest",
-  icons: { icon: "/icon.svg" },
+  icons: { icon: "/icon-192.png", apple: "/icon-512.png" },
 };
 
 export const viewport: Viewport = {

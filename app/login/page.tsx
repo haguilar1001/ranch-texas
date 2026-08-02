@@ -13,9 +13,9 @@ export default function LoginPage() {
         className="w-full max-w-sm rounded-2xl border-4 border-ranch-marron bg-white p-8 shadow-lg"
       >
         <div className="mb-6 text-center">
-          <p className="text-xs uppercase tracking-widest text-ranch-dorado">Parque</p>
-          <h1 className="text-3xl font-black text-ranch-marron">RANCH TEXAS</h1>
-          <p className="mt-1 text-sm text-ranch-marron/60">Ingreso al sistema</p>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="Ranch Texas" className="mx-auto mb-2 h-20 w-auto" />
+          <p className="text-sm text-ranch-marron/60">Ingreso al sistema</p>
         </div>
 
         <label className="block text-sm font-semibold text-ranch-marron">Usuario</label>
