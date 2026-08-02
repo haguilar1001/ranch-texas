@@ -4,8 +4,8 @@ Estado por fase. Se entrega una fase a la vez; no se avanza sin visto bueno del 
 
 | Fase | Contenido | Estado |
 |------|-----------|--------|
-| F0 | Setup, esquema BD, migraciones, seeds, auth y roles, GitHub + Railway | 🚧 En curso |
-| F1 | Taquilla: venta, cálculo, medios de pago, cortesías con motivo | ⬜ Pendiente |
+| F0 | Setup, esquema BD, migraciones, seeds, auth y roles, GitHub + Railway | ✅ Completada (desplegado en Railway) |
+| F1 | Taquilla: venta, cálculo, medios de pago, cortesías con motivo | 🚧 En curso |
 | F2 | Manillas con QR firmado + impresión | ⬜ Pendiente |
 | F3 | Escaneo y control de acceso con reglas por punto | ⬜ Pendiente |
 | F4 | Consentimientos digitales con firma | ⬜ Pendiente |
@@ -15,7 +15,25 @@ Estado por fase. Se entrega una fase a la vez; no se avanza sin visto bueno del 
 | F8 | Vistas `analitica`, usuario read-only y export para Power BI | ⬜ Pendiente |
 | F9 | Modo offline, respaldos, despliegue y manual de usuario | ⬜ Pendiente |
 
-## F0 — Setup (en curso)
+## F1 — Taquilla (funcional, probada end-to-end)
+
+- [x] Lógica de venta pura y probada: `lib/ventas/calculo.ts` (totales + validación); 12 tests.
+- [x] Login/logout (JWT en cookie httpOnly) + control de rol.
+- [x] Apertura de turno de caja (mínima; el cierre/cuadre va en F5).
+- [x] Taquilla: cantidades por tipo, cortesías (atención/invitación) con motivo + autorización,
+      pago mixto, "efectivo exacto", totales en vivo, precios recalculados en el servidor.
+- [x] Server action transaccional `registrarVenta` (encabezado + detalle + pagos), consecutivo por turno.
+- [x] Probado E2E con navegador: login → turno → venta #1 (2 adultos + 1 niño, $180.000) →
+      consistencia en BD (encabezado = detalle = pagos). Typecheck y 27 tests verdes.
+
+Pendiente dentro de F1 / próximos:
+- Descuentos parciales en la UI (la lógica y tests ya existen; falta el control en pantalla).
+- Captura opcional de comprador (nombre/documento) — campos ya en el modelo.
+- Anulación/reimpresión de venta (van con manillas en F2, requieren supervisor + auditoría).
+- `numero_venta` bajo concurrencia (aggregate+create): agregar reintento ante choque de único.
+- **F2 generará las manillas con QR e impresión** a partir del detalle de la venta.
+
+## F0 — Setup (completada)
 
 Checklist:
 - [x] Documentos del proyecto: `CLAUDE.md`, `progreso.md`, `decisiones.md`
