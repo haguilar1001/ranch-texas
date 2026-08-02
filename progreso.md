@@ -5,8 +5,8 @@ Estado por fase. Se entrega una fase a la vez; no se avanza sin visto bueno del 
 | Fase | Contenido | Estado |
 |------|-----------|--------|
 | F0 | Setup, esquema BD, migraciones, seeds, auth y roles, GitHub + Railway | ✅ Completada (desplegado en Railway) |
-| F1 | Taquilla: venta, cálculo, medios de pago, cortesías con motivo | 🚧 En curso |
-| F2 | Manillas con QR firmado + impresión | ⬜ Pendiente |
+| F1 | Taquilla: venta, cálculo, medios de pago, cortesías con motivo | ✅ Completada |
+| F2 | Manillas con QR firmado + impresión | ✅ Completada |
 | F3 | Escaneo y control de acceso con reglas por punto | ⬜ Pendiente |
 | F4 | Consentimientos digitales con firma | ⬜ Pendiente |
 | F5 | Caja: apertura, movimientos, cierre y cuadre diario | ⬜ Pendiente |
@@ -14,6 +14,26 @@ Estado por fase. Se entrega una fase a la vez; no se avanza sin visto bueno del 
 | F7 | Reportes de ventas mes/año y comparativos | ⬜ Pendiente |
 | F8 | Vistas `analitica`, usuario read-only y export para Power BI | ⬜ Pendiente |
 | F9 | Modo offline, respaldos, despliegue y manual de usuario | ⬜ Pendiente |
+
+## F2 — Manillas con QR e impresión (completada, verificada)
+
+- [x] Núcleo de venta refactorizado a `lib/ventas/registrar.ts` (`crearVenta`) — testeable sin HTTP.
+- [x] Al vender se genera **una manilla por asistente** (incluidos bebés y cortesías): UUID +
+      firma HMAC + consecutivo legible (`#venta-n`) + vencimiento (fin del día operativo).
+- [x] Cola de impresión persistente (`impresiones`, estado pendiente/impreso) con payload de tirilla.
+- [x] Módulo de impresión abstraído `lib/impresion` (driver ESC/POS 80mm placeholder) + test.
+- [x] Pantalla de impresión 80mm con **QR grande**, tipo en letra grande, consecutivo, vigencia,
+      caja/cajero y leyenda; botón Imprimir (window.print) + marcar impreso.
+- [x] Reimpresión y anulación **solo supervisor**, con motivo y **auditoría** (`log_auditoria`);
+      anular marca venta + todas sus manillas como anuladas.
+- [x] Verificado con `scripts/verificar-f2.ts`: 4 manillas / 4 asistentes, firmas QR válidas,
+      bebé marcado, cola poblada, totales consistentes. Pantalla de impresión probada en navegador
+      (QR PNG 312×312 renderizados). Typecheck limpio, 30 tests verdes.
+
+Pendiente / próximo:
+- Impresión física real (driver ESC/POS sobre hardware) cuando se defina la impresora (P: modelo).
+- `numero_venta`/consecutivo bajo concurrencia: reintento ante choque de único.
+- **F3: escaneo y control de acceso** validará estas manillas por firma + estado.
 
 ## F1 — Taquilla (funcional, probada end-to-end)
 

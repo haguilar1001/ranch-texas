@@ -1,4 +1,4 @@
-import type { TipoLinea } from "@/lib/ventas/calculo";
+import type { TipoLinea } from "./calculo";
 
 export interface EntradaLinea {
   tipo_visitante_id: string;
@@ -23,3 +23,11 @@ export interface EntradaVenta {
 export type ResultadoVenta =
   | { ok: true; numero_venta: number; venta_id: string }
   | { ok: false; error: string };
+
+/** Contexto de ejecución de la venta (cajero + turno + caja). */
+export interface ContextoVenta {
+  usuarioId: string;
+  usuarioNombre: string;
+  turnoId: string;
+  cajaNombre: string;
+}

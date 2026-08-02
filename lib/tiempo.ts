@@ -1,0 +1,31 @@
+// Utilidades de tiempo en zona America/Bogota (UTC-5, sin horario de verano).
+
+const TZ = "America/Bogota";
+
+/** Fecha local (YYYY-MM-DD) en Bogotá para un instante dado. */
+export function fechaBogota(now: Date = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now);
+}
+
+/**
+ * Fin del día operativo: 23:59:59 hora Bogotá del día del instante dado.
+ * Vigencia por defecto de la manilla (reingreso permitido el mismo día).
+ * Configurable a futuro (pasaportes de temporada, abonos).
+ */
+export function finDelDiaOperativo(now: Date = new Date()): Date {
+  return new Date(`${fechaBogota(now)}T23:59:59-05:00`);
+}
+
+/** Formatea fecha/hora en Bogotá para mostrar en la manilla. */
+export function formatearFechaHoraBogota(d: Date): string {
+  return new Intl.DateTimeFormat("es-CO", {
+    timeZone: TZ,
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(d);
+}

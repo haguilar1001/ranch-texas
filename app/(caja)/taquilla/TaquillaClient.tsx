@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { registrarVenta } from "./actions";
-import type { EntradaVenta } from "./tipos";
+import type { EntradaVenta } from "@/lib/ventas/tipos";
 import { calcularTotales, validarVenta, type LineaVenta } from "@/lib/ventas/calculo";
 import { formatearCOP, formatearMiles, parseCOP } from "@/lib/dinero/cop";
 
@@ -31,6 +31,7 @@ export default function TaquillaClient({
   const [pagos, setPagos] = useState<FilaPago[]>([{ key: 1, medio_pago_id: medios[0]?.id ?? "", monto: "" }]);
   const [enviando, setEnviando] = useState(false);
   const [resultado, setResultado] = useState<{ ok: boolean; texto: string } | null>(null);
+  const [ultimaVenta, setUltimaVenta] = useState<{ id: string; numero: number } | null>(null);
   const keyRef = useRef(2);
   const nextKey = () => keyRef.current++;
 
@@ -117,13 +118,16 @@ export default function TaquillaClient({
       })),
       pagos: pagosLimpios,
     };
+    const asistentes = totales.cantidad_asistentes;
     const r = await registrarVenta(entrada);
     setEnviando(false);
     if (r.ok) {
-      setResultado({ ok: true, texto: `Venta #${r.numero_venta} registrada (${totales.cantidad_asistentes} asistentes).` });
+      setResultado({ ok: true, texto: `Venta #${r.numero_venta} registrada (${asistentes} manillas).` });
+      setUltimaVenta({ id: r.venta_id, numero: r.numero_venta });
       limpiar();
     } else {
       setResultado({ ok: false, texto: r.error });
+      setUltimaVenta(null);
     }
   }
 
@@ -240,6 +244,14 @@ export default function TaquillaClient({
 
           {resultado && (
             <p className={`rounded-lg px-3 py-2 text-sm ${resultado.ok ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>{resultado.texto}</p>
+          )}
+          {ultimaVenta && (
+            <a
+              href={`/imprimir/venta/${ultimaVenta.id}`}
+              className="block rounded-lg bg-ranch-dorado px-4 py-3 text-center font-semibold text-white hover:opacity-90"
+            >
+              🖨️ Imprimir manillas (Venta #{ultimaVenta.numero})
+            </a>
           )}
           {!validacion.ok && lineas.length > 0 && (
             <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">{validacion.errores[0]}</p>
