@@ -9,9 +9,11 @@ export default async function AdminPage() {
   if (!tieneRol(s.rol, "consulta")) return <main className="p-6">Sin acceso.</main>;
 
   const enlaces = [
-    ["Gastos", "/admin/gastos", tieneRol(s.rol, "supervisor")],
-    ["Reporte de gastos / P&G", "/admin/reportes/gastos", true],
-    ["Reporte de ventas", "/admin/reportes/ventas", true],
+    ["📊 Dashboard de ventas", "/admin/dashboard", true],
+    ["📈 Comparativo año vs año", "/admin/reportes/comparativo", true],
+    ["📋 Reporte de ventas", "/admin/reportes/ventas", true],
+    ["🧾 Gastos", "/admin/gastos", tieneRol(s.rol, "supervisor")],
+    ["💰 Reporte de gastos / P&G", "/admin/reportes/gastos", true],
   ] as const;
 
   return (
