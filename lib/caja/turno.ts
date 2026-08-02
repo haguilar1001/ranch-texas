@@ -1,9 +1,9 @@
 import { prisma } from "@/lib/db";
 
-/** Turno abierto del usuario (incluye la caja). Un usuario tiene a lo sumo un turno abierto. */
+/** Turno activo del usuario (abierto o reabierto). Un usuario tiene a lo sumo uno activo. */
 export function turnoAbiertoDe(usuarioId: string) {
   return prisma.turnoCaja.findFirst({
-    where: { usuario_id: usuarioId, estado: "abierto" },
+    where: { usuario_id: usuarioId, estado: { in: ["abierto", "reabierto"] } },
     include: { caja: true },
   });
 }

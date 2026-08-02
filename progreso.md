@@ -9,11 +9,29 @@ Estado por fase. Se entrega una fase a la vez; no se avanza sin visto bueno del 
 | F2 | Manillas con QR firmado + impresión | ✅ Completada |
 | F3 | Escaneo y control de acceso con reglas por punto | ✅ Completada |
 | F4 | Consentimientos digitales con firma | ✅ Completada |
-| F5 | Caja: apertura, movimientos, cierre y cuadre diario | ⬜ Pendiente |
+| F5 | Caja: apertura, movimientos, cierre y cuadre diario | ✅ Completada |
 | F6 | Gastos y rubros con soportes | ⬜ Pendiente |
 | F7 | Reportes de ventas mes/año y comparativos | ⬜ Pendiente |
 | F8 | Vistas `analitica`, usuario read-only y export para Power BI | ⬜ Pendiente |
 | F9 | Modo offline, respaldos, despliegue y manual de usuario | ⬜ Pendiente |
+
+## F5 — Caja y cuadre (completada, verificada)
+
+- [x] Cálculo de cierre puro y probado `lib/caja/cierre.ts` (3 tests) + resumen `lib/caja/resumen.ts`.
+- [x] Movimientos de caja (ingreso/egreso) con concepto, aparte de las ventas.
+- [x] **Cierre con conteo por denominación** (billetes/monedas COP): efectivo esperado vs. contado,
+      **diferencia** (sobrante/faltante) con observación obligatoria si no cuadra.
+- [x] Fórmula: `esperado = base + ventas_efectivo + otros_ingresos − egresos`.
+- [x] **Cuadre del turno** imprimible (PDF) y **export a Excel/CSV**: ventas por medio y por tipo,
+      cortesías (no cobrado), anuladas, efectivo.
+- [x] Cierre bloquea el turno; **reapertura solo administrador** con motivo y auditoría.
+- [x] Verificado con `scripts/verificar-f5.ts` (esperado 225.000, cuadra/sobrante/faltante) y por
+      render en navegador (esperado $380.000 en vivo). 46 tests, typecheck limpio.
+
+Pendiente / próximo:
+- **Cuadre diario consolidado** (todos los turnos del día) — va con los reportes de F7.
+- Export a `.xlsx` nativo (hoy CSV, que Excel abre) usando la librería ya instalada, si se requiere.
+- **F6: Gastos** por rubro jerárquico con soporte.
 
 ## F4 — Consentimientos digitales (completada, verificada)
 
