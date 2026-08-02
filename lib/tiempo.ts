@@ -21,6 +21,11 @@ export function finDelDiaOperativo(now: Date = new Date()): Date {
   return new Date(`${fechaBogota(now)}T23:59:59-05:00`);
 }
 
+/** Inicio del día operativo (00:00:00 hora Bogotá). Ventana para aforo y cuadre del día. */
+export function inicioDelDiaOperativo(now: Date = new Date()): Date {
+  return new Date(`${fechaBogota(now)}T00:00:00-05:00`);
+}
+
 /** Formatea fecha/hora en Bogotá para mostrar en la manilla. */
 export function formatearFechaHoraBogota(d: Date): string {
   return new Intl.DateTimeFormat("es-CO", {

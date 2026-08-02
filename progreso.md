@@ -7,13 +7,33 @@ Estado por fase. Se entrega una fase a la vez; no se avanza sin visto bueno del 
 | F0 | Setup, esquema BD, migraciones, seeds, auth y roles, GitHub + Railway | ✅ Completada (desplegado en Railway) |
 | F1 | Taquilla: venta, cálculo, medios de pago, cortesías con motivo | ✅ Completada |
 | F2 | Manillas con QR firmado + impresión | ✅ Completada |
-| F3 | Escaneo y control de acceso con reglas por punto | ⬜ Pendiente |
+| F3 | Escaneo y control de acceso con reglas por punto | ✅ Completada |
 | F4 | Consentimientos digitales con firma | ⬜ Pendiente |
 | F5 | Caja: apertura, movimientos, cierre y cuadre diario | ⬜ Pendiente |
 | F6 | Gastos y rubros con soportes | ⬜ Pendiente |
 | F7 | Reportes de ventas mes/año y comparativos | ⬜ Pendiente |
 | F8 | Vistas `analitica`, usuario read-only y export para Power BI | ⬜ Pendiente |
 | F9 | Modo offline, respaldos, despliegue y manual de usuario | ⬜ Pendiente |
+
+## F3 — Escaneo y control de acceso (completada, verificada)
+
+- [x] Reglas de acceso puras y probadas: `lib/acceso/validar.ts` (`evaluarAcceso`); 8 tests.
+- [x] Núcleo `lib/acceso/procesar.ts`: verifica firma, aplica reglas del punto, registra el acceso
+      (permitido/denegado + motivo) y calcula aforo del día. Testeable sin HTTP.
+- [x] Reglas por punto: un_ingreso / reingreso / entrada_salida; requiere consentimiento; aforo máx.
+- [x] Pantalla `/escaneo` móvil: selección de punto, lector manual/USB (Enter) y **cámara**
+      (BarcodeDetector, mejora progresiva), **semáforo verde/rojo** con motivo, sentido y aforo en vivo.
+- [x] Todo escaneo se guarda en `accesos` (hora, punto, usuario, resultado, sentido).
+- [x] Verificado con `scripts/verificar-f3.ts`: entrada/salida alterna, aforo neto correcto,
+      QR falsificado / falta consentimiento / manilla anulada → DENEGADO. Typecheck limpio, 38 tests.
+
+Pendiente / próximo:
+- Modo **offline** del escáner (validar por firma + cola IndexedDB + sync) → va en F9.
+- Reglas de edad/estatura por punto: la estructura existe, pero su aplicación estricta depende de los
+  datos del **consentimiento (F4)** (la manilla no lleva la edad exacta).
+- Interacción de la UI probada por render + verificación determinista; el clic automatizado en dev
+  es poco fiable por hidratación (no es un bug — sin errores de consola).
+- **F4: consentimientos** desbloquearán los puntos que hoy exigen consentimiento (karts, motocross).
 
 ## F2 — Manillas con QR e impresión (completada, verificada)
 
