@@ -10,10 +10,27 @@ Estado por fase. Se entrega una fase a la vez; no se avanza sin visto bueno del 
 | F3 | Escaneo y control de acceso con reglas por punto | ✅ Completada |
 | F4 | Consentimientos digitales con firma | ✅ Completada |
 | F5 | Caja: apertura, movimientos, cierre y cuadre diario | ✅ Completada |
-| F6 | Gastos y rubros con soportes | ⬜ Pendiente |
+| F6 | Gastos y rubros con soportes | ✅ Completada |
 | F7 | Reportes de ventas mes/año y comparativos | ⬜ Pendiente |
 | F8 | Vistas `analitica`, usuario read-only y export para Power BI | ⬜ Pendiente |
 | F9 | Modo offline, respaldos, despliegue y manual de usuario | ⬜ Pendiente |
+
+## F6 — Gastos (completada, verificada)
+
+- [x] Cálculo de gasto puro y probado `lib/gastos/calculo.ts` (total = base + IVA − retenciones).
+- [x] Registro de gastos por **rubro jerárquico** (grupo/rubro/subrubro con ruta en el select),
+      proveedor (upsert por nombre), NIT, IVA, retefuente/reteICA/otras, medio de pago, estado.
+- [x] Marcar pagado / anular (supervisor, con auditoría).
+- [x] Reporte `/admin/reportes/gastos`: **presupuesto vs. ejecutado** por grupo y **P&G simplificado**
+      (ingresos por ventas del mes − gastos = resultado). Índice `/admin`.
+- [x] Verificado con `scripts/verificar-f6.ts` (total con IVA, roll-up por grupo) y por render
+      (rubro jerárquico; P&G $180.000 − $0). 48 tests, typecheck limpio.
+
+Pendiente / próximo:
+- **Soporte** hoy es una URL de referencia a la factura; el **upload de archivo** necesita
+  almacenamiento de objetos (Railway FS es efímero) — decisión ya anotada en decisiones.md.
+- **Gastos recurrentes** (plantilla mensual) y **carga de presupuesto desde Excel** — pendientes.
+- **F7: Reportes de ventas** (día/mes/año, comparativo año vs año con la venta histórica).
 
 ## F5 — Caja y cuadre (completada, verificada)
 
