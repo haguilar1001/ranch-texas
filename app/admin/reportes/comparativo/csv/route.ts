@@ -1,0 +1,30 @@
+import { obtenerSesion, tieneRol } from "@/lib/auth/sesion";
+import { comparativoAnual } from "@/lib/reportes/comparativo";
+import { variacionPct } from "@/lib/reportes/util";
+
+const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+
+export async function GET(req: Request) {
+  const s = await obtenerSesion();
+  if (!s || !tieneRol(s.rol, "consulta")) return new Response("No autorizado", { status: 401 });
+
+  const url = new URL(req.url);
+  const anio = parseInt(url.searchParams.get("anio") ?? "2026", 10);
+  const producto = url.searchParams.get("producto") ?? undefined;
+  const comp = await comparativoAnual(anio, producto || undefined);
+
+  const filas: string[][] = [
+    [`Comparativo ${anio} vs ${anio - 1}${producto ? ` — ${producto}` : ""}`],
+    ["Mes", String(anio - 1), String(anio), "Variacion %"],
+    ...comp.meses.map((m) => {
+      const v = variacionPct(m.actual, m.anterior);
+      return [MESES[m.mes - 1], String(m.anterior), String(m.actual), v === null ? "" : v.toFixed(1)];
+    }),
+    ["Total", String(comp.totalAnterior), String(comp.totalActual), (variacionPct(comp.totalActual, comp.totalAnterior) ?? 0).toFixed(1)],
+  ];
+  const csv = "﻿" + filas.map((f) => f.map((c) => `"${(c ?? "").replace(/"/g, '""')}"`).join(";")).join("\r\n");
+
+  return new Response(csv, {
+    headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="comparativo-${anio}.csv"` },
+  });
+}

@@ -1,0 +1,87 @@
+import { redirect } from "next/navigation";
+import { obtenerSesion, tieneRol } from "@/lib/auth/sesion";
+import { indicadoresVentas } from "@/lib/reportes/ventas";
+import { fechaBogota } from "@/lib/tiempo";
+import { formatearCOP } from "@/lib/dinero/cop";
+
+export const dynamic = "force-dynamic";
+
+const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+
+function Kpi({ label, valor }: { label: string; valor: string }) {
+  return (
+    <div className="rounded-xl border-2 border-ranch-marron/20 bg-white p-3 text-center">
+      <p className="text-xs text-ranch-marron/60">{label}</p>
+      <p className="text-lg font-black text-ranch-marron">{valor}</p>
+    </div>
+  );
+}
+
+export default async function ReporteVentasPage({ searchParams }: { searchParams: Promise<{ anio?: string; mes?: string }> }) {
+  const s = await obtenerSesion();
+  if (!s) redirect("/login");
+  if (!tieneRol(s.rol, "consulta")) return <main className="p-6">Sin acceso.</main>;
+
+  const hoy = fechaBogota();
+  const sp = await searchParams;
+  const anio = parseInt(sp.anio ?? hoy.slice(0, 4), 10);
+  const mes = parseInt(sp.mes ?? hoy.slice(5, 7), 10);
+  const inicio = new Date(`${anio}-${String(mes).padStart(2, "0")}-01T00:00:00-05:00`);
+  const nAnio = mes === 12 ? anio + 1 : anio, nMes = mes === 12 ? 1 : mes + 1;
+  const fin = new Date(`${nAnio}-${String(nMes).padStart(2, "0")}-01T00:00:00-05:00`);
+
+  const ind = await indicadoresVentas(inicio, fin);
+
+  return (
+    <main className="mx-auto max-w-4xl p-4">
+      <h1 className="mb-1 text-2xl font-black text-ranch-marron">Reporte de ventas</h1>
+      <form className="mb-4 flex gap-2 text-sm">
+        <select name="mes" defaultValue={mes} className="rounded border px-2 py-1">{MESES.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}</select>
+        <select name="anio" defaultValue={anio} className="rounded border px-2 py-1">{[2024, 2025, 2026].map((a) => <option key={a} value={a}>{a}</option>)}</select>
+        <button className="rounded bg-ranch-marron px-3 py-1 font-semibold text-ranch-crema">Ver</button>
+        <a href={`/admin/reportes/ventas/csv?anio=${anio}&mes=${mes}`} className="rounded bg-ranch-verde px-3 py-1 font-semibold text-white">⬇️ Excel</a>
+      </form>
+
+      <p className="mb-2 text-sm text-ranch-marron/60">{MESES[mes - 1]} {anio}</p>
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <Kpi label="Entradas (asistentes)" valor={String(ind.asistentes)} />
+        <Kpi label="Ventas" valor={String(ind.numVentas)} />
+        <Kpi label="Ingreso total" valor={formatearCOP(ind.ingreso)} />
+        <Kpi label="Ticket promedio" valor={formatearCOP(ind.ticketPromedio)} />
+        <Kpi label="% cortesías/desc." valor={`${ind.pctCortesias.toFixed(1)}%`} />
+        <Kpi label="Valor no cobrado" valor={formatearCOP(ind.valorNoCobrado)} />
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <section className="rounded-xl border-2 border-ranch-marron/20 bg-white p-4">
+          <h2 className="mb-2 font-bold text-ranch-marron">Por tipo de visitante</h2>
+          <table className="w-full text-sm"><tbody>
+            {ind.porTipo.map((t) => <tr key={t.tipo} className="border-t border-ranch-marron/10"><td className="py-1">{t.tipo} ({t.cantidad})</td><td className="py-1 text-right">{formatearCOP(t.total)}</td></tr>)}
+            {ind.porTipo.length === 0 && <tr><td className="py-1 text-ranch-marron/40">Sin datos.</td></tr>}
+          </tbody></table>
+        </section>
+        <section className="rounded-xl border-2 border-ranch-marron/20 bg-white p-4">
+          <h2 className="mb-2 font-bold text-ranch-marron">Por medio de pago</h2>
+          <table className="w-full text-sm"><tbody>
+            {ind.porMedio.map((m) => <tr key={m.medio} className="border-t border-ranch-marron/10"><td className="py-1">{m.medio}</td><td className="py-1 text-right">{formatearCOP(m.total)}</td></tr>)}
+            {ind.porMedio.length === 0 && <tr><td className="py-1 text-ranch-marron/40">Sin datos.</td></tr>}
+          </tbody></table>
+        </section>
+        <section className="rounded-xl border-2 border-ranch-marron/20 bg-white p-4">
+          <h2 className="mb-2 font-bold text-ranch-marron">Por día de la semana</h2>
+          <table className="w-full text-sm"><tbody>
+            {ind.porDiaSemana.map((d) => <tr key={d.dia} className="border-t border-ranch-marron/10"><td className="py-1 capitalize">{d.dia}</td><td className="py-1 text-right">{formatearCOP(d.total)}</td></tr>)}
+            {ind.porDiaSemana.length === 0 && <tr><td className="py-1 text-ranch-marron/40">Sin datos.</td></tr>}
+          </tbody></table>
+        </section>
+        <section className="rounded-xl border-2 border-ranch-marron/20 bg-white p-4">
+          <h2 className="mb-2 font-bold text-ranch-marron">Por hora</h2>
+          <table className="w-full text-sm"><tbody>
+            {ind.porHora.map((h) => <tr key={h.hora} className="border-t border-ranch-marron/10"><td className="py-1">{String(h.hora).padStart(2, "0")}:00</td><td className="py-1 text-right">{formatearCOP(h.total)}</td></tr>)}
+            {ind.porHora.length === 0 && <tr><td className="py-1 text-ranch-marron/40">Sin datos.</td></tr>}
+          </tbody></table>
+        </section>
+      </div>
+    </main>
+  );
+}

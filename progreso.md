@@ -11,9 +11,25 @@ Estado por fase. Se entrega una fase a la vez; no se avanza sin visto bueno del 
 | F4 | Consentimientos digitales con firma | ✅ Completada |
 | F5 | Caja: apertura, movimientos, cierre y cuadre diario | ✅ Completada |
 | F6 | Gastos y rubros con soportes | ✅ Completada |
-| F7 | Reportes de ventas mes/año y comparativos | ⬜ Pendiente |
+| F7 | Reportes de ventas mes/año y comparativos | ✅ Completada |
 | F8 | Vistas `analitica`, usuario read-only y export para Power BI | ⬜ Pendiente |
 | F9 | Modo offline, respaldos, despliegue y manual de usuario | ⬜ Pendiente |
+
+## F7 — Reportes de ventas (completada, verificada)
+
+- [x] Utilidad de variación pura y probada `lib/reportes/util.ts` (3 tests).
+- [x] **Comparativo año vs. año por mes** (`/admin/reportes/comparativo`) desde la venta histórica:
+      totales, variación %, tabla mensual con barras, filtro por producto, export a Excel/CSV.
+- [x] Reporte de ventas en vivo (`/admin/reportes/ventas`): entradas, ingreso, ticket promedio,
+      % cortesías, valor no cobrado, por tipo, por medio, por día de semana y por hora; export CSV.
+- [x] Verificado con `scripts/verificar-f7.ts`: 2023 $5.096.947.030 y 2024 $4.474.715.300 (−12,2%),
+      suma de meses = total, filtro por producto. Ambos reportes probados por render con datos reales.
+- [x] 51 tests, typecheck limpio.
+
+Pendiente / próximo:
+- Filtros adicionales (caja/cajero) en el reporte en vivo — la base está lista.
+- Cuadre **diario consolidado** (varios turnos) — pendiente de F5.
+- **F8: capa analítica** (`analitica`) con vistas estrella + usuario read-only para Power BI.
 
 ## F6 — Gastos (completada, verificada)
 
