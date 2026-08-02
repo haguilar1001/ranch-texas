@@ -1,0 +1,734 @@
+// Esquema Prisma — Parque Ranch Texas
+// Convenciones:
+//  - Nombres de negocio en español; código técnico en inglés.
+//  - Dinero SIEMPRE Int (COP entero, sin decimales).
+//  - Nada se borra físicamente: baja lógica con `activo` o enums de estado.
+//  - Auditoría transversal: creado_en/creado_por/actualizado_en/actualizado_por en cada tabla.
+//    `creado_por` / `actualizado_por` guardan el id del usuario como String (sin FK, a propósito,
+//    para no multiplicar back-relations sobre Usuario).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ------------------------- ENUMS -------------------------
+
+enum Rol {
+  administrador
+  supervisor
+  cajero
+  control_acceso
+  consulta
+}
+
+enum EstadoManilla {
+  activa
+  usada
+  anulada
+  vencida
+}
+
+enum EstadoVenta {
+  completada
+  anulada
+}
+
+enum TipoLineaVenta {
+  pago
+  atencion
+  invitacion
+}
+
+enum TipoMovCaja {
+  apertura
+  ingreso
+  egreso
+  cierre
+}
+
+enum EstadoTurno {
+  abierto
+  cerrado
+  reabierto
+}
+
+enum EstadoGasto {
+  pendiente
+  pagado
+  anulado
+}
+
+enum TipoReglaAcceso {
+  un_ingreso
+  reingreso
+  entrada_salida
+}
+
+enum SentidoAcceso {
+  entrada
+  salida
+}
+
+enum ResultadoAcceso {
+  permitido
+  denegado
+}
+
+enum NivelRubro {
+  grupo
+  rubro
+  subrubro
+}
+
+enum TipoGasto {
+  unico
+  recurrente
+}
+
+enum EstadoImpresion {
+  pendiente
+  impreso
+  fallido
+}
+
+// ------------------------- USUARIOS Y CAJA -------------------------
+
+model Usuario {
+  id             String    @id @default(uuid())
+  nombre         String
+  usuario        String    @unique
+  hash_password  String
+  rol            Rol
+  activo         Boolean   @default(true)
+  ultimo_ingreso DateTime?
+
+  turnos TurnoCaja[]
+  ventas Venta[]
+
+  creado_en       DateTime @default(now())
+  creado_por      String?
+  actualizado_en  DateTime @updatedAt
+  actualizado_por String?
+
+  @@map("usuarios")
+}
+
+model Caja {
+  id        String  @id @default(uuid())
+  nombre    String
+  ubicacion String?
+  activo    Boolean @default(true)
+
+  turnos TurnoCaja[]
+
+  creado_en       DateTime @default(now())
+  creado_por      String?
+  actualizado_en  DateTime @updatedAt
+  actualizado_por String?
+
+  @@map("cajas")
+}
+
+model TurnoCaja {
+  id                 String      @id @default(uuid())
+  caja_id            String
+  usuario_id         String
+  base_inicial       Int         @default(0)
+  abierto_en         DateTime    @default(now())
+  cerrado_en         DateTime?
+  estado             EstadoTurno @default(abierto)
+  efectivo_esperado  Int?
+  efectivo_contado   Int?
+  diferencia         Int?
+  observacion_cierre String?
+  reabierto_por      String?
+  reabierto_en       DateTime?
+
+  caja        Caja                 @relation(fields: [caja_id], references: [id])
+  usuario     Usuario              @relation(fields: [usuario_id], references: [id])
+  movimientos MovimientoCaja[]
+  conteos     ConteoDenominacion[]
+  ventas      Venta[]
+
+  creado_en       DateTime @default(now())
+  creado_por      String?
+  actualizado_en  DateTime @updatedAt
+  actualizado_por String?
+
+  @@index([caja_id, estado])
+  @@index([abierto_en])
+  @@map("turnos_caja")
+}
+
+model MovimientoCaja {
+  id            String      @id @default(uuid())
+  turno_id      String
+  tipo          TipoMovCaja
+  monto         Int
+  concepto      String
+  medio_pago_id String?
+  venta_id      String?
+  referencia    String?
+
+  turno      TurnoCaja  @relation(fields: [turno_id], references: [id])
+  medio_pago MedioPago? @relation(fields: [medio_pago_id], references: [id])
+
+  creado_en       DateTime @default(now())
+  creado_por      String?
+  actualizado_en  DateTime @updatedAt
+  actualizado_por String?
+
+  @@index([turno_id, tipo])
+  @@map("movimientos_caja")
+}
+
+model ConteoDenominacion {
+  id           String @id @default(uuid())
+  turno_id     String
+  denominacion Int
+  cantidad     Int
+
+  turno TurnoCaja @relation(fields: [turno_id], references: [id])
+
+  creado_en       DateTime @default(now())
+  creado_por      String?
+  actualizado_en  DateTime @updatedAt
+  actualizado_por String?
+
+  @@index([turno_id])
+  @@map("conteo_denominaciones")
+}
+
+// ------------------------- CATÁLOGOS DE VENTA -------------------------
+
+model TipoVisitante {
+  id            String  @id @default(uuid())
+  nombre        String
+  codigo        String  @unique
+  requiere_pago Boolean @default(true)
+  edad_min      Int?
+  edad_max      Int?
+  orden         Int     @default(0)
+  activo        Boolean @default(true)
+
+  tarifas  Tarifa[]
+  detalle  VentaDetalle[]
+  manillas Manilla[]
+
+  creado_en       DateTime @default(now())
+  creado_por      String?
+  actualizado_en  DateTime @updatedAt
+  actualizado_por String?
+
+  @@map("tipos_visitante")
+}
+
+model Tarifa {
+  id                String    @id @default(uuid())
+  tipo_visitante_id String
+  valor             Int
+  vigente_desde     DateTime
+  vigente_hasta     DateTime?
+  motivo_cambio     String?
+
+  tipo_visitante TipoVisitante  @relation(fields: [tipo_visitante_id], references: [id])
+  detalle        VentaDetalle[]
+
+  creado_en       DateTime @default(now())
+  creado_por      String?
+  actualizado_en  DateTime @updatedAt
+  actualizado_por String?
+
+  @@index([tipo_visitante_id, vigente_desde])
+  @@map("tarifas")
+}
+
+model MotivoCortesia {
+  id                    String  @id @default(uuid())
+  nombre                String
+  requiere_autorizacion Boolean @default(true)
+  activo                Boolean @default(true)
+
+  detalle VentaDetalle[]
+
+  creado_en       DateTime @default(now())
+  creado_por      String?
+  actualizado_en  DateTime @updatedAt
+  actualizado_por String?
+
+  @@map("motivos_cortesia")
+}
+
+model MedioPago {
+  id          String  @id @default(uuid())
+  nombre      String
+  codigo      String  @unique
+  es_efectivo Boolean @default(false)
+  orden       Int     @default(0)
+  activo      Boolean @default(true)
+
+  pagos       VentaPago[]
+  movimientos MovimientoCaja[]
+  gastos      Gasto[]
+
+  creado_en       DateTime @default(now())
+  creado_por      String?
+  actualizado_en  DateTime @updatedAt
+  actualizado_por String?
+
+  @@map("medios_pago")
+}
+
+// ------------------------- VENTAS -------------------------
+
+model Venta {
+  id                  String      @id @default(uuid())
+  turno_id            String
+  usuario_id          String
+  numero_venta        Int
+  total_lista         Int         @default(0)
+  total_cobrado       Int         @default(0)
+  total_descuento     Int         @default(0)
+  cantidad_asistentes Int         @default(0)
+  estado              EstadoVenta @default(completada)
+  motivo_anulacion    String?
+  anulada_por         String?
+  anulada_en          DateTime?
+
+  // Datos opcionales del comprador (configurable)
+  comprador_nombre    String?
+  comprador_documento String?
+
+  turno   TurnoCaja      @relation(fields: [turno_id], references: [id])
+  usuario Usuario        @relation(fields: [usuario_id], references: [id])
+  detalle VentaDetalle[]
+  pagos   VentaPago[]
+
+  creado_en       DateTime @default(now())
+  creado_por      String?
+  actualizado_en  DateTime @updatedAt
+  actualizado_por String?
+
+  @@unique([turno_id, numero_venta])
+  @@index([creado_en])
+  @@map("ventas")
+}
+
+model VentaDetalle {
+  id                 String         @id @default(uuid())
+  venta_id           String
+  tipo_visitante_id  String
+  tarifa_id          String?
+  tipo_linea         TipoLineaVenta @default(pago)
+  cantidad           Int
+  valor_lista        Int // por unidad
+  valor_cobrado      Int // por unidad (valor_lista - descuento)
+  motivo_descuento   String?
+  autorizado_por     String?
+  motivo_cortesia_id String?
+
+  venta           Venta           @relation(fields: [venta_id], references: [id])
+  tipo_visitante  TipoVisitante   @relation(fields: [tipo_visitante_id], references: [id])
+  tarifa          Tarifa?         @relation(fields: [tarifa_id], references: [id])
+  motivo_cortesia MotivoCortesia? @relation(fields: [motivo_cortesia_id], references: [id])
+  manillas        Manilla[]
+
+  creado_en       DateTime @default(now())
+  creado_por      String?
+  actualizado_en  DateTime @updatedAt
+  actualizado_por String?
+
+  @@index([venta_id])
+  @@map("venta_detalle")
+}
+
+model VentaPago {
+  id            String  @id @default(uuid())
+  venta_id      String
+  medio_pago_id String
+  monto         Int
+  referencia    String?
+
+  venta      Venta     @relation(fields: [venta_id], references: [id])
+  medio_pago MedioPago @relation(fields: [medio_pago_id], references: [id])
+
+  creado_en       DateTime @default(now())
+  creado_por      String?
+  actualizado_en  DateTime @updatedAt
+  actualizado_por String?
+
+  @@index([venta_id])
+  @@map("venta_pagos")
+}
+
+model Manilla {
+  id                String        @id @default(uuid())
+  codigo_uuid       String        @unique
+  firma_hmac        String
+  consecutivo       String // corto y legible por si el QR se daña
+  venta_detalle_id  String
+  tipo_visitante_id String
+  estado            EstadoManilla @default(activa)
+  es_bebe           Boolean       @default(false)
+  vencimiento       DateTime?
+  usada_en          DateTime?
+  anulada_en        DateTime?
+  anulada_por       String?
+  motivo_anulacion  String?
+  reimpresa_veces   Int           @default(0)
+
+  venta_detalle   VentaDetalle     @relation(fields: [venta_detalle_id], references: [id])
+  tipo_visitante  TipoVisitante    @relation(fields: [tipo_visitante_id], references: [id])
+  accesos         Acceso[]
+  consentimientos Consentimiento[]
+  impresiones     Impresion[]
+
+  creado_en       DateTime @default(now())
+  creado_por      String?
+  actualizado_en  DateTime @updatedAt
+  actualizado_por String?
+
+  @@index([estado])
+  @@index([venta_detalle_id])
+  @@map("manillas")
+}
+
+// ------------------------- ACCESO -------------------------
+
+model Atraccion {
+  id                      String  @id @default(uuid())
+  nombre                  String
+  descripcion             String?
+  edad_minima             Int?
+  estatura_minima         Int? // cm
+  requiere_consentimiento Boolean @default(false)
+  activa                  Boolean @default(true)
+
+  puntos_control  PuntoControl[]
+  consentimientos Consentimiento[]
+  textos          TextoConsentimiento[]
+
+  creado_en       DateTime @default(now())
+  creado_por      String?
+  actualizado_en  DateTime @updatedAt
+  actualizado_por String?
+
+  @@map("atracciones")
+}
+
+model PuntoControl {
+  id                      String          @id @default(uuid())
+  nombre                  String
+  atraccion_id            String?
+  tipo_regla              TipoReglaAcceso @default(entrada_salida)
+  edad_minima             Int?
+  estatura_minima         Int?
+  requiere_consentimiento Boolean         @default(false)
+  aforo_maximo            Int?
+  activo                  Boolean         @default(true)
+
+  atraccion Atraccion? @relation(fields: [atraccion_id], references: [id])
+  accesos   Acceso[]
+
+  creado_en       DateTime @default(now())
+  creado_por      String?
+  actualizado_en  DateTime @updatedAt
+  actualizado_por String?
+
+  @@map("puntos_control")
+}
+
+model Acceso {
+  id                String          @id @default(uuid())
+  manilla_id        String?
+  punto_control_id  String
+  resultado         ResultadoAcceso
+  sentido           SentidoAcceso?
+  motivo_denegacion String?
+  escaneado_por     String?
+  dispositivo       String?
+  escaneado_en      DateTime // hora del evento (dispositivo)
+  registrado_en     DateTime        @default(now()) // llegada al servidor
+  sincronizado      Boolean         @default(true)
+  id_cliente        String?         @unique // idempotencia de la cola offline
+
+  manilla       Manilla?     @relation(fields: [manilla_id], references: [id])
+  punto_control PuntoControl @relation(fields: [punto_control_id], references: [id])
+
+  creado_en       DateTime @default(now())
+  creado_por      String?
+  actualizado_en  DateTime @updatedAt
+  actualizado_por String?
+
+  @@index([punto_control_id, escaneado_en])
+  @@index([manilla_id])
+  @@index([sincronizado])
+  @@map("accesos")
+}
+
+// ------------------------- CONSENTIMIENTOS -------------------------
+
+model TextoConsentimiento {
+  id            String    @id @default(uuid())
+  codigo        String // agrupa versiones del mismo documento
+  version       Int
+  titulo        String
+  cuerpo        String    @db.Text
+  atraccion_id  String?
+  vigente_desde DateTime  @default(now())
+  vigente_hasta DateTime?
+  activo        Boolean   @default(true)
+
+  atraccion       Atraccion?       @relation(fields: [atraccion_id], references: [id])
+  consentimientos Consentimiento[]
+
+  creado_en       DateTime @default(now())
+  creado_por      String?
+  actualizado_en  DateTime @updatedAt
+  actualizado_por String?
+
+  @@unique([codigo, version])
+  @@map("textos_consentimiento")
+}
+
+model Consentimiento {
+  id                      String   @id @default(uuid())
+  manilla_id              String
+  atraccion_id            String
+  texto_consentimiento_id String
+  es_menor                Boolean  @default(false)
+  nombre_firmante         String
+  documento_firmante      String
+  nombre_acudiente        String?
+  documento_acudiente     String?
+  parentesco              String?
+  firma_imagen            String   @db.Text // PNG base64 del canvas
+  ip                      String?
+  dispositivo             String?
+  user_agent              String?
+  firmado_en              DateTime @default(now())
+
+  manilla   Manilla             @relation(fields: [manilla_id], references: [id])
+  atraccion Atraccion           @relation(fields: [atraccion_id], references: [id])
+  texto     TextoConsentimiento @relation(fields: [texto_consentimiento_id], references: [id])
+
+  creado_en       DateTime @default(now())
+  creado_por      String?
+  actualizado_en  DateTime @updatedAt
+  actualizado_por String?
+
+  @@index([manilla_id])
+  @@index([atraccion_id])
+  @@map("consentimientos")
+}
+
+// ------------------------- GASTOS -------------------------
+
+model Proveedor {
+  id         String  @id @default(uuid())
+  nombre     String
+  nit_cedula String?
+  contacto   String?
+  telefono   String?
+  email      String?
+  activo     Boolean @default(true)
+
+  gastos      Gasto[]
+  recurrentes GastoRecurrente[]
+
+  creado_en       DateTime @default(now())
+  creado_por      String?
+  actualizado_en  DateTime @updatedAt
+  actualizado_por String?
+
+  @@map("proveedores")
+}
+
+model RubroGasto {
+  id       String     @id @default(uuid())
+  nombre   String
+  nivel    NivelRubro
+  padre_id String?
+  orden    Int        @default(0)
+  activo   Boolean    @default(true)
+
+  padre RubroGasto?  @relation("Jerarquia", fields: [padre_id], references: [id])
+  hijos RubroGasto[] @relation("Jerarquia")
+
+  gastos       Gasto[]
+  recurrentes  GastoRecurrente[]
+  presupuestos Presupuesto[]
+
+  creado_en       DateTime @default(now())
+  creado_por      String?
+  actualizado_en  DateTime @updatedAt
+  actualizado_por String?
+
+  @@index([padre_id])
+  @@map("rubros_gasto")
+}
+
+model Gasto {
+  id                String      @id @default(uuid())
+  proveedor_id      String?
+  rubro_gasto_id    String
+  descripcion       String
+  fecha_gasto       DateTime
+  base_gravable     Int         @default(0)
+  iva               Int         @default(0)
+  retefuente        Int         @default(0)
+  reteica           Int         @default(0)
+  otras_retenciones Int         @default(0)
+  total             Int         @default(0)
+  estado            EstadoGasto @default(pendiente)
+  tipo              TipoGasto   @default(unico)
+  plantilla_id      String?
+  soporte_archivo   String?
+  pagado_en         DateTime?
+  medio_pago_id     String?
+
+  proveedor  Proveedor?       @relation(fields: [proveedor_id], references: [id])
+  rubro      RubroGasto       @relation(fields: [rubro_gasto_id], references: [id])
+  plantilla  GastoRecurrente? @relation(fields: [plantilla_id], references: [id])
+  medio_pago MedioPago?       @relation(fields: [medio_pago_id], references: [id])
+
+  creado_en       DateTime @default(now())
+  creado_por      String?
+  actualizado_en  DateTime @updatedAt
+  actualizado_por String?
+
+  @@index([rubro_gasto_id])
+  @@index([fecha_gasto])
+  @@index([estado])
+  @@map("gastos")
+}
+
+model GastoRecurrente {
+  id             String  @id @default(uuid())
+  rubro_gasto_id String
+  proveedor_id   String?
+  descripcion    String
+  monto_estimado Int
+  dia_del_mes    Int
+  activo         Boolean @default(true)
+
+  rubro     RubroGasto @relation(fields: [rubro_gasto_id], references: [id])
+  proveedor Proveedor? @relation(fields: [proveedor_id], references: [id])
+  gastos    Gasto[]
+
+  creado_en       DateTime @default(now())
+  creado_por      String?
+  actualizado_en  DateTime @updatedAt
+  actualizado_por String?
+
+  @@map("gastos_recurrentes")
+}
+
+model Presupuesto {
+  id                  String @id @default(uuid())
+  rubro_gasto_id      String
+  anio                Int
+  mes                 Int? // null = presupuesto anual
+  monto_presupuestado Int
+
+  rubro RubroGasto @relation(fields: [rubro_gasto_id], references: [id])
+
+  creado_en       DateTime @default(now())
+  creado_por      String?
+  actualizado_en  DateTime @updatedAt
+  actualizado_por String?
+
+  @@unique([rubro_gasto_id, anio, mes])
+  @@map("presupuesto")
+}
+
+// ------------------------- INFRAESTRUCTURA -------------------------
+
+model Impresion {
+  id         String          @id @default(uuid())
+  manilla_id String?
+  tipo       String // "manilla" | "cierre"
+  payload    String          @db.Text
+  estado     EstadoImpresion @default(pendiente)
+  intentos   Int             @default(0)
+  error      String?
+  impreso_en DateTime?
+
+  manilla Manilla? @relation(fields: [manilla_id], references: [id])
+
+  creado_en       DateTime @default(now())
+  creado_por      String?
+  actualizado_en  DateTime @updatedAt
+  actualizado_por String?
+
+  @@index([estado])
+  @@map("impresiones")
+}
+
+model LogAuditoria {
+  id            String   @id @default(uuid())
+  usuario_id    String?
+  entidad       String
+  entidad_id    String
+  accion        String // crear, anular, reabrir, reimprimir, cambio_tarifa, descuento, login...
+  datos_antes   Json?
+  datos_despues Json?
+  ip            String?
+  creado_en     DateTime @default(now())
+
+  @@index([entidad, entidad_id])
+  @@index([usuario_id, creado_en])
+  @@map("log_auditoria")
+}
+
+// ------------------------- DIMENSIÓN FECHA (analítica) -------------------------
+// Tabla física para reportes y Power BI. Se puebla con scripts/gen-dim-fecha.ts.
+// Solo lleva banderas informativas; NO restringe la operación (el parque abre entre
+// semana cuando hay eventos).
+
+model DimFecha {
+  fecha             DateTime @id @db.Date
+  anio              Int
+  mes               Int
+  dia               Int
+  trimestre         Int
+  semana_iso        Int
+  nombre_dia        String
+  nombre_mes        String
+  dia_semana        Int // 1=lunes ... 7=domingo
+  es_fin_semana     Boolean
+  es_festivo        Boolean  @default(false)
+  nombre_festivo    String?
+  es_temporada_alta Boolean  @default(false)
+
+  @@index([anio, mes])
+  @@map("dim_fecha")
+}
+
+// ------------------------- VENTAS HISTÓRICAS (importadas de Excel) -------------------------
+// Ingresos históricos por fecha y línea de producto, cargados desde el Excel de operación
+// anterior (no transaccional). Alimenta los comparativos año vs año en Power BI junto a los
+// datos en vivo. Se refresca por completo desde el archivo fuente (ver scripts/import-historico.ts).
+
+model VentaHistorica {
+  id       String   @id @default(uuid())
+  fecha    DateTime @db.Date
+  anio     Int
+  mes      Int
+  producto String
+  valor    Int // COP entero
+  negocio  String   @default("RANCH TEXAS")
+  origen   String // archivo/fuente de origen
+
+  creado_en DateTime @default(now())
+
+  @@index([fecha])
+  @@index([anio, mes])
+  @@index([producto])
+  @@map("ventas_historicas")
+}
