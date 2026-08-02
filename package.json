@@ -18,6 +18,7 @@
     "seed": "tsx scripts/seed.ts",
     "seed:demo": "tsx scripts/seed.ts --demo",
     "import:historico": "tsx scripts/import-historico.ts",
+    "export:analitica": "tsx scripts/export-analitica.ts",
     "postinstall": "prisma generate"
   },
   "prisma": {

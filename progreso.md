@@ -12,8 +12,25 @@ Estado por fase. Se entrega una fase a la vez; no se avanza sin visto bueno del 
 | F5 | Caja: apertura, movimientos, cierre y cuadre diario | ✅ Completada |
 | F6 | Gastos y rubros con soportes | ✅ Completada |
 | F7 | Reportes de ventas mes/año y comparativos | ✅ Completada |
-| F8 | Vistas `analitica`, usuario read-only y export para Power BI | ⬜ Pendiente |
+| F8 | Vistas `analitica`, usuario read-only y export para Power BI | ✅ Completada |
 | F9 | Modo offline, respaldos, despliegue y manual de usuario | ⬜ Pendiente |
+
+## F8 — Capa analítica para Power BI (completada, verificada)
+
+- [x] Migración `20260802205020_analitica`: esquema `analitica` con **12 vistas en modelo estrella**
+      (dim_fecha, dim_tipo_visitante, dim_medio_pago, dim_atraccion, dim_cajero, dim_rubro_gasto;
+      hechos_ventas, hechos_ventas_pagos, hechos_accesos, hechos_gastos, hechos_cuadre_caja,
+      hechos_ventas_historicas). Fechas convertidas a día local de Bogotá (`fecha_key`).
+- [x] Usuario **`bi_readonly`** (`scripts/sql/bi_readonly.sql`): solo lee `analitica`, nunca `public`
+      (verificado: lee histórico $20.906M, `public.ventas` → permission denied).
+- [x] **Export CSV** por vista (`npm run export:analitica` → `EXPORT_DIR`), plan B para Power BI.
+- [x] Guía de conexión `docs/powerbi.md`.
+- [x] Verificado por SQL y export (12 CSVs). 51 tests, typecheck limpio.
+
+Pendiente / próximo:
+- En Railway: correr `bi_readonly.sql` con clave real (la migración de vistas se aplica sola en el deploy).
+- Materialized views + refresh si el volumen crece (hoy vistas simples, suficientes).
+- **F9: modo offline del escáner, respaldos, endurecimiento del deploy y manual de usuario.**
 
 ## F7 — Reportes de ventas (completada, verificada)
 
