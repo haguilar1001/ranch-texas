@@ -20,9 +20,26 @@ export interface IndicadoresVentas {
   porHora: { hora: number; total: number }[];
 }
 
-export async function indicadoresVentas(desde: Date, hasta: Date): Promise<IndicadoresVentas> {
+export interface FiltrosVentas {
+  cajaId?: string;
+  cajeroId?: string;
+}
+
+function whereVentas(desde: Date, hasta: Date, f?: FiltrosVentas) {
+  const where: {
+    estado: "completada";
+    creado_en: { gte: Date; lt: Date };
+    usuario_id?: string;
+    turno?: { caja_id: string };
+  } = { estado: "completada", creado_en: { gte: desde, lt: hasta } };
+  if (f?.cajeroId) where.usuario_id = f.cajeroId;
+  if (f?.cajaId) where.turno = { caja_id: f.cajaId };
+  return where;
+}
+
+export async function indicadoresVentas(desde: Date, hasta: Date, filtros?: FiltrosVentas): Promise<IndicadoresVentas> {
   const ventas = await prisma.venta.findMany({
-    where: { estado: "completada", creado_en: { gte: desde, lt: hasta } },
+    where: whereVentas(desde, hasta, filtros),
     select: { id: true, total_cobrado: true, total_lista: true, total_descuento: true, cantidad_asistentes: true, creado_en: true },
   });
   const ids = ventas.map((v) => v.id);
@@ -73,4 +90,20 @@ export async function indicadoresVentas(desde: Date, hasta: Date): Promise<Indic
     porDiaSemana: diaAcc.map((total, i) => ({ dia: NOMBRES_DIA[i], total })).filter((d) => d.total > 0),
     porHora: [...horaAcc.entries()].map(([hora, total]) => ({ hora, total })).sort((a, b) => a.hora - b.hora),
   };
+}
+
+/** Ventas en vivo por mes del año (índice 0 = enero), con filtros opcionales. */
+export async function ventasPorMes(anio: number, filtros?: FiltrosVentas): Promise<number[]> {
+  const inicio = new Date(`${anio}-01-01T00:00:00-05:00`);
+  const fin = new Date(`${anio + 1}-01-01T00:00:00-05:00`);
+  const ventas = await prisma.venta.findMany({
+    where: whereVentas(inicio, fin, filtros),
+    select: { total_cobrado: true, creado_en: true },
+  });
+  const meses = new Array(12).fill(0);
+  for (const v of ventas) {
+    const b = aBogota(v.creado_en);
+    meses[b.getUTCMonth()] += v.total_cobrado;
+  }
+  return meses;
 }

@@ -4,6 +4,7 @@ import { obtenerSesion, tieneRol } from "@/lib/auth/sesion";
 import { rubrosPlano } from "@/lib/gastos/rubros";
 import { fechaBogota } from "@/lib/tiempo";
 import { formatearCOP } from "@/lib/dinero/cop";
+import Barras from "@/components/Barras";
 
 export const dynamic = "force-dynamic";
 
@@ -91,6 +92,13 @@ export default async function ReporteGastosPage({ searchParams }: { searchParams
           </tbody>
         </table>
       </section>
+
+      {filas.length > 0 && (
+        <section className="mb-4 rounded-xl border-2 border-ranch-marron/20 bg-white p-4">
+          <h2 className="mb-3 font-bold text-ranch-marron">Gasto ejecutado por grupo</h2>
+          <Barras datos={filas.map((f) => ({ etiqueta: f.grupo, valor: f.ejecutado }))} />
+        </section>
+      )}
 
       <section className="rounded-xl border-4 border-ranch-marron bg-white p-4">
         <h2 className="mb-2 font-bold text-ranch-marron">P&amp;G simplificado</h2>
