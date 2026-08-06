@@ -2,6 +2,7 @@ import "dotenv/config";
 import { PrismaClient, NivelRubro, TipoReglaAcceso } from "@prisma/client";
 import { hashPassword } from "../lib/auth/password";
 import { filasDimFecha } from "./gen-dim-fecha";
+import { CONSENTIMIENTO_TITULO, CONSENTIMIENTO_CUERPO, CONSENTIMIENTO_VERSION } from "./consentimiento-texto";
 
 const prisma = new PrismaClient();
 const DEMO = process.argv.includes("--demo");
@@ -141,8 +142,18 @@ async function seedMotivosCortesia() {
 async function seedAtraccionesYControl() {
   const countA = await prisma.atraccion.count();
   if (countA === 0) {
-    // Provisional (ver decisiones P1/P2): lista real la envía el responsable.
-    const atracciones = ["Karts Areneros", "Karts Chinos", "Motocross"];
+    // Lista real (responsable, 2026-08-05): atracciones que EXIGEN consentimiento firmado.
+    const atracciones = [
+      "Mario Karts",
+      "Karts Fórmula 1",
+      "Karts Buggies",
+      "Karts Areneros",
+      "Karts Playeros",
+      "Motocross",
+      "Botes",
+      "Paseo Caballo",
+      "Paseo Pony",
+    ];
     for (const nombre of atracciones) {
       const atr = await prisma.atraccion.create({
         data: { nombre, requiere_consentimiento: true, creado_por: POR },
@@ -157,7 +168,7 @@ async function seedAtraccionesYControl() {
         },
       });
     }
-    console.log("  ✓ atracciones provisionales + sus puntos de control");
+    console.log("  ✓ 9 atracciones con consentimiento + sus puntos de control");
   } else {
     console.log("  · atracciones ya existen, se omite");
   }
@@ -215,22 +226,30 @@ async function seedRubrosGasto() {
 }
 
 async function seedTextoConsentimiento() {
-  const existe = await prisma.textoConsentimiento.findFirst({ where: { codigo: "general" } });
-  if (existe) return console.log("  · texto de consentimiento ya existe, se omite");
+  // Texto legal OFICIAL provisto por el responsable (DIVERSIONES DEL OCCIDENTE S.A.S.).
+  // Versionado: se registra como una versión nueva; nunca se sobrescribe una anterior.
+  const existe = await prisma.textoConsentimiento.findFirst({
+    where: { codigo: "general", version: CONSENTIMIENTO_VERSION },
+  });
+  if (existe) return console.log("  · texto de consentimiento oficial ya existe, se omite");
+
+  // Cerrar cualquier versión anterior aún abierta.
+  await prisma.textoConsentimiento.updateMany({
+    where: { codigo: "general", vigente_hasta: null },
+    data: { vigente_hasta: new Date(), activo: false },
+  });
+
   await prisma.textoConsentimiento.create({
     data: {
       codigo: "general",
-      version: 1,
-      titulo: "Consentimiento informado y autorización de tratamiento de datos",
-      cuerpo:
-        "[BORRADOR — PENDIENTE DE REVISIÓN LEGAL] Declaro conocer los riesgos de la atracción y " +
-        "participo voluntariamente. Autorizo el tratamiento de mis datos personales conforme a la " +
-        "Ley 1581 de 2012 (habeas data) para las finalidades informadas por Parque Ranch Texas. " +
-        "El texto definitivo debe ser revisado y aprobado por el área legal antes de producción.",
+      version: CONSENTIMIENTO_VERSION,
+      titulo: CONSENTIMIENTO_TITULO,
+      cuerpo: CONSENTIMIENTO_CUERPO,
+      activo: true,
       creado_por: POR,
     },
   });
-  console.log("  ✓ texto de consentimiento v1 (BORRADOR — revisar con abogado)");
+  console.log(`  ✓ texto de consentimiento OFICIAL v${CONSENTIMIENTO_VERSION} (DIVERSIONES DEL OCCIDENTE S.A.S.)`);
 }
 
 async function seedDimFecha() {

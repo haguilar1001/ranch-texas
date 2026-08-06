@@ -14,6 +14,37 @@ Estado por fase. Se entrega una fase a la vez; no se avanza sin visto bueno del 
 | F7 | Reportes de ventas mes/año y comparativos | ✅ Completada |
 | F8 | Vistas `analitica`, usuario read-only y export para Power BI | ✅ Completada |
 | F9 | Modo offline, respaldos, despliegue y manual de usuario | ✅ Completada |
+| F10 | Reorganización por módulos + maestros de operación (Atracciones, Personal, Animales, Equipos) | 🟡 Boceto en revisión |
+
+## F10 — Módulos operativos (BOCETO en revisión, datos inventados)
+
+Objetivo: separar la app por áreas (menú: Ventas, Caja, Accesos, Personal, Animales, Equipos, Gastos,
+Administración) y crear los **maestros/parámetros** que luego se afinan con datos reales cargados por Excel.
+
+- [x] **Modelo de datos nuevo** (`prisma/schema.prisma`): Personal (`areas_trabajo`, `cargos`,
+      `empleados`), Animales (`categorias_animal`, `recintos`, `animales`, `alimentos`, `raciones`),
+      Equipos (`categorias_equipo`, `equipos`, `mantenimientos_equipo`). Con auditoría, baja lógica y
+      dinero Int. **Schema válido** (`prisma validate`) y cliente generado.
+- [x] **Menú por módulos**: pantalla de inicio (`app/page.tsx`) y `NavBar` reorganizados por áreas.
+- [x] **Pantallas boceto (read-only)**: `/admin/accesos` (atracciones + condiciones + flag de
+      consentimiento + **conteo de entradas del día por atracción desde el lector**), `/admin/personal`,
+      `/admin/animales` (inventario + alimentos + raciones), `/admin/equipos` (inventario + mantenimientos).
+- [x] **Datos reales integrados**: 9 atracciones que exigen consentimiento (Mario Karts, Karts Fórmula 1,
+      Karts Buggies, Karts Areneros, Karts Playeros, Motocross, Botes, Paseo Caballo, Paseo Pony) y el
+      **texto legal OFICIAL** del consentimiento (DIVERSIONES DEL OCCIDENTE S.A.S.) → `seed.ts` +
+      `scripts/consentimiento-texto.ts`. Reemplaza el BORRADOR (queda versionado v2).
+- [x] **Seed de datos inventados** para los módulos nuevos: `scripts/seed-boceto.ts`
+      (`npm run seed:boceto`), idempotente.
+- [x] Verificado: **typecheck limpio, 51 tests verdes, build de producción OK (25 rutas + middleware)**.
+
+Pendiente para afinar (con el responsable):
+- Aplicar en su máquina/Railway: `npm run db:up && npm run prisma:migrate && npm run seed:boceto`
+  (en este entorno no hay Docker/BD, el código quedó listo y validado).
+- **Formularios de captura/edición** (CRUD) por módulo — hoy son listas de solo lectura.
+- **Carga por Excel** de cada maestro (plantillas por definir con las columnas = campos del modelo).
+- Atracciones que **NO** exigen consentimiento (piscinas, zonas, etc.) — falta la lista completa (P1).
+- Condiciones reales de **edad/estatura** por atracción (P2).
+- Revisión legal final del texto de consentimiento antes de producción.
 
 ## F9 — Cierre: offline, respaldos, deploy y manual (completada, verificada)
 

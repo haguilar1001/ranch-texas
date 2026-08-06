@@ -12,7 +12,11 @@ export default async function NavBar() {
     ["Taquilla", "/taquilla", tieneRol(s.rol, "cajero")],
     ["Caja", "/caja/turno", tieneRol(s.rol, "cajero")],
     ["Escaneo", "/escaneo", tieneRol(s.rol, "control_acceso")],
-    ["Dashboard", "/admin/dashboard", tieneRol(s.rol, "consulta")],
+    ["Ventas", "/admin/dashboard", tieneRol(s.rol, "consulta")],
+    ["Accesos", "/admin/accesos", tieneRol(s.rol, "consulta")],
+    ["Personal", "/admin/personal", tieneRol(s.rol, "supervisor")],
+    ["Animales", "/admin/animales", tieneRol(s.rol, "supervisor")],
+    ["Equipos", "/admin/equipos", tieneRol(s.rol, "supervisor")],
     ["Gastos", "/admin/gastos", tieneRol(s.rol, "supervisor")],
   ] as [string, string, boolean][])
     .filter(([, , ver]) => ver)

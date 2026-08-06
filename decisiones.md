@@ -26,6 +26,12 @@ Registro de decisiones tomadas y pendientes. Fecha de referencia inicial: 2026-0
 - **Acceso:** parque de **una sola entrada** con **reingreso el mismo día** (regla `entrada_salida`).
 - **Aforo del parque: 3.000** personas. Sin aforo por atracción.
 - Consentimiento **por atracción**.
+- **Texto legal del consentimiento** ✅ *(2026-08-05):* el responsable entregó el texto OFICIAL
+  (DIVERSIONES DEL OCCIDENTE S.A.S. — consentimiento informado, exoneración de responsabilidad,
+  habeas data Ley 1581/2012, autorización de imagen y CCTV, contacto inforanchtexas@gmail.com).
+  Reemplaza el BORRADOR; queda versionado (v2) en `scripts/consentimiento-texto.ts` + `seed.ts`.
+  Nota: los "numerales" que referencia el texto asumen numeración de lista; validar con el abogado
+  la numeración/formato final antes de producción.
 - **Un turno por día** por caja.
 - **~60 ventas/hora** en día pico (dimensionamiento).
 - **Sin factura electrónica DIAN** y **sin IVA/impoconsumo** por ahora. Interface de facturación
@@ -45,8 +51,10 @@ Registro de decisiones tomadas y pendientes. Fecha de referencia inicial: 2026-0
 - Archivo del logo esperado en `public/logo.png` (lo sube el responsable; placeholder mientras tanto).
 
 ## Pendientes
-- **(P1) Lista final de atracciones** y cuáles exigen consentimiento firmado. El responsable la envía
-  con su formato (aprox. 2026-08-03). Seed provisional: Karts Areneros, Karts Chinos, Motocross.
+- **(P1) Lista final de atracciones.** ✅ *Parcial (2026-08-05):* el responsable envió las **9 atracciones
+  que EXIGEN consentimiento**: Mario Karts, Karts Fórmula 1, Karts Buggies, Karts Areneros, Karts Playeros,
+  Motocross, Botes, Paseo Caballo, Paseo Pony (ya en `seed.ts`). **Falta** la lista de atracciones/zonas
+  que NO exigen consentimiento (piscinas, etc.) para completar el catálogo.
 - **(P2) Tabla de requisitos de edad/estatura por atracción.** La envía el responsable.
 - **(P3) Medios de pago:** el responsable está verificando la lista propuesta (efectivo, débito,
   crédito, Nequi, Daviplata, transferencia, bono/convenio).

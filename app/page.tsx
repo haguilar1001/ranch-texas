@@ -20,14 +20,15 @@ function Kpi({ label, valor, sub }: { label: string; valor: string; sub?: string
   );
 }
 
-function MenuItem({ icon, label, desc, href }: { icon: string; label: string; desc: string; href: string }) {
+function MenuButton({ icon, label, desc, href }: { icon: string; label: string; desc: string; href: string }) {
   return (
-    <Link href={href} className="group flex items-start gap-3 rounded-2xl border-2 border-ranch-marron/15 bg-white p-4 shadow-sm transition hover:border-ranch-dorado hover:shadow-md">
-      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-ranch-marron/10 text-2xl group-hover:bg-ranch-dorado/20">{icon}</span>
-      <span>
-        <span className="block font-bold text-ranch-marron">{label}</span>
-        <span className="block text-sm text-ranch-marron/60">{desc}</span>
-      </span>
+    <Link
+      href={href}
+      className="group flex flex-col items-center justify-start gap-2 rounded-2xl border-2 border-ranch-marron/15 bg-white p-5 text-center shadow-sm transition hover:-translate-y-0.5 hover:border-ranch-dorado hover:shadow-md"
+    >
+      <span className="grid h-16 w-16 place-items-center rounded-2xl bg-ranch-marron/10 text-3xl transition group-hover:bg-ranch-dorado/20">{icon}</span>
+      <span className="font-bold leading-tight text-ranch-marron">{label}</span>
+      <span className="text-xs leading-tight text-ranch-marron/50">{desc}</span>
     </Link>
   );
 }
@@ -77,9 +78,12 @@ export default async function Home() {
     ["🚪", "Escaneo", "Control de acceso", "/escaneo", tieneRol(s.rol, "control_acceso")],
   ] as [string, string, string, string, boolean][]).filter((x) => x[4]);
 
-  const analisis = ([
-    ["📊", "Dashboard de ventas", "Indicadores y tendencias", "/admin/dashboard", tieneRol(s.rol, "consulta")],
-    ["📈", "Comparativo año vs año", "Venta histórica", "/admin/reportes/comparativo", tieneRol(s.rol, "consulta")],
+  const modulos = ([
+    ["📊", "Ventas", "Indicadores, reportes y comparativos", "/admin/dashboard", tieneRol(s.rol, "consulta")],
+    ["🎡", "Accesos y atracciones", "Atracciones, consentimiento, conteo diario", "/admin/accesos", tieneRol(s.rol, "consulta")],
+    ["👷", "Personal", "Empleados, áreas y cargos", "/admin/personal", tieneRol(s.rol, "supervisor")],
+    ["🐄", "Animales", "Inventario, recintos y alimentación", "/admin/animales", tieneRol(s.rol, "supervisor")],
+    ["🔧", "Equipos", "Inventario y mantenimientos", "/admin/equipos", tieneRol(s.rol, "supervisor")],
     ["🧾", "Gastos y P&G", "Rubros, presupuesto, resultado", "/admin/gastos", tieneRol(s.rol, "supervisor")],
     ["⚙️", "Administración", "Reportes y maestros", "/admin", tieneRol(s.rol, "consulta")],
   ] as [string, string, string, string, boolean][]).filter((x) => x[4]);
@@ -88,15 +92,34 @@ export default async function Home() {
     <>
       <NavBar />
       <main className="mx-auto max-w-6xl p-4 sm:p-6">
-        {/* Hero */}
-        <div className="mb-6 rounded-3xl border-4 border-ranch-marron bg-gradient-to-br from-ranch-crema to-white p-6">
-          <p className="text-xs uppercase tracking-widest text-ranch-dorado">Parque Ranch Texas</p>
-          <h1 className="text-3xl font-black text-ranch-marron">Hola, {s.nombre.split(" ")[0]} 👋</h1>
-          <p className="text-ranch-marron/60">Resumen del día — {new Date().toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long" })}</p>
-        </div>
+        {/* Hero con logo y video de fondo opcional.
+            Para activar el video: sube el archivo a public/hero.mp4 (se reproduce en silencio y en bucle).
+            Si no existe, se ve el logo sobre el degradado de marca. */}
+        <section className="relative mb-6 overflow-hidden rounded-3xl border-4 border-ranch-marron bg-gradient-to-br from-ranch-crema to-white">
+          <video
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="none"
+            className="absolute inset-0 h-full w-full object-cover opacity-60"
+          >
+            <source src="/hero.mp4" type="video/mp4" />
+          </video>
+          {/* Velo claro: mantiene el logo (oscuro) y el texto legibles, con o sin video. */}
+          <div className="absolute inset-0 bg-gradient-to-t from-ranch-crema/85 via-ranch-crema/55 to-white/70" />
+          <div className="relative flex flex-col items-center gap-2 px-6 py-10 text-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.png" alt="Ranch Texas" className="mb-1 h-24 w-auto drop-shadow-md sm:h-28" />
+            <h1 className="text-2xl font-black text-ranch-marron sm:text-3xl">Hola, {s.nombre.split(" ")[0]} 👋</h1>
+            <p className="text-sm text-ranch-marron/60">
+              Resumen del día — {new Date().toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long" })}
+            </p>
+          </div>
+        </section>
 
         {/* KPIs de hoy */}
-        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Kpi label="Ingreso hoy" valor={formatearCOP(ind.ingreso)} />
           <Kpi label="Entradas hoy" valor={String(ind.asistentes)} sub={`${ind.numVentas} ventas`} />
           <Kpi label="Ticket promedio" valor={formatearCOP(ind.ticketPromedio)} />
@@ -115,20 +138,20 @@ export default async function Home() {
           </div>
         </Link>
 
-        {/* Menú */}
+        {/* Menú — botones con iconos */}
         {operacion.length > 0 && (
           <section className="mb-6">
             <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-ranch-marron/50">Operación</h2>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {operacion.map((x) => <MenuItem key={x[3]} icon={x[0]} label={x[1]} desc={x[2]} href={x[3]} />)}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              {operacion.map((x) => <MenuButton key={x[3]} icon={x[0]} label={x[1]} desc={x[2]} href={x[3]} />)}
             </div>
           </section>
         )}
-        {analisis.length > 0 && (
+        {modulos.length > 0 && (
           <section>
-            <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-ranch-marron/50">Análisis y administración</h2>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {analisis.map((x) => <MenuItem key={x[3]} icon={x[0]} label={x[1]} desc={x[2]} href={x[3]} />)}
+            <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-ranch-marron/50">Módulos</h2>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              {modulos.map((x) => <MenuButton key={x[3]} icon={x[0]} label={x[1]} desc={x[2]} href={x[3]} />)}
             </div>
           </section>
         )}

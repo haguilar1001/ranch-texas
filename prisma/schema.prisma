@@ -732,3 +732,296 @@ model VentaHistorica {
   @@index([producto])
   @@map("ventas_historicas")
 }
+
+// ============================================================================
+//  MÓDULOS OPERATIVOS (F10) — Personal, Animales, Equipos
+//  Maestros/parámetros que se afinan con datos reales (carga por Excel).
+//  Convenciones: español en negocio, dinero Int, baja lógica (`activo`/estado),
+//  auditoría transversal en cada tabla.
+// ============================================================================
+
+// ------------------------- PERSONAL -------------------------
+
+enum EstadoEmpleado {
+  activo
+  inactivo
+  retirado
+}
+
+model AreaTrabajo {
+  id          String  @id @default(uuid())
+  nombre      String
+  descripcion String?
+  activo      Boolean @default(true)
+
+  cargos    Cargo[]
+  empleados Empleado[]
+  equipos   Equipo[]
+
+  creado_en       DateTime @default(now())
+  creado_por      String?
+  actualizado_en  DateTime @updatedAt
+  actualizado_por String?
+
+  @@map("areas_trabajo")
+}
+
+model Cargo {
+  id      String  @id @default(uuid())
+  nombre  String
+  area_id String?
+  activo  Boolean @default(true)
+
+  area      AreaTrabajo? @relation(fields: [area_id], references: [id])
+  empleados Empleado[]
+
+  creado_en       DateTime @default(now())
+  creado_por      String?
+  actualizado_en  DateTime @updatedAt
+  actualizado_por String?
+
+  @@index([area_id])
+  @@map("cargos")
+}
+
+model Empleado {
+  id             String         @id @default(uuid())
+  nombre         String
+  tipo_documento String? // CC, CE, PA...
+  documento      String?        @unique
+  cargo_id       String?
+  area_id        String?
+  telefono       String?
+  email          String?
+  fecha_ingreso  DateTime?
+  fecha_retiro   DateTime?
+  estado         EstadoEmpleado @default(activo)
+  usuario_id     String? // enlace opcional al Usuario del sistema (login)
+  observaciones  String?
+  activo         Boolean        @default(true)
+
+  cargo Cargo?       @relation(fields: [cargo_id], references: [id])
+  area  AreaTrabajo? @relation(fields: [area_id], references: [id])
+
+  creado_en       DateTime @default(now())
+  creado_por      String?
+  actualizado_en  DateTime @updatedAt
+  actualizado_por String?
+
+  @@index([area_id])
+  @@index([cargo_id])
+  @@map("empleados")
+}
+
+// ------------------------- ANIMALES -------------------------
+
+enum SexoAnimal {
+  macho
+  hembra
+  desconocido
+}
+
+enum EstadoAnimal {
+  activo
+  enfermo
+  cuarentena
+  fallecido
+  trasladado
+}
+
+model CategoriaAnimal {
+  id          String  @id @default(uuid())
+  nombre      String // Aves, Equinos, Bovinos, Reptiles...
+  descripcion String?
+  activo      Boolean @default(true)
+
+  animales Animal[]
+  raciones Racion[]
+
+  creado_en       DateTime @default(now())
+  creado_por      String?
+  actualizado_en  DateTime @updatedAt
+  actualizado_por String?
+
+  @@map("categorias_animal")
+}
+
+model Recinto {
+  id          String  @id @default(uuid())
+  nombre      String // Corral 1, Establo, Aviario...
+  descripcion String?
+  capacidad   Int?
+  activo      Boolean @default(true)
+
+  animales Animal[]
+
+  creado_en       DateTime @default(now())
+  creado_por      String?
+  actualizado_en  DateTime @updatedAt
+  actualizado_por String?
+
+  @@map("recintos")
+}
+
+model Animal {
+  id               String       @id @default(uuid())
+  nombre           String
+  codigo           String? // chapeta / identificador físico
+  categoria_id     String
+  recinto_id       String?
+  especie          String?
+  raza             String?
+  sexo             SexoAnimal   @default(desconocido)
+  fecha_nacimiento DateTime?
+  fecha_ingreso    DateTime?
+  estado           EstadoAnimal @default(activo)
+  observaciones    String?
+  activo           Boolean      @default(true)
+
+  categoria CategoriaAnimal @relation(fields: [categoria_id], references: [id])
+  recinto   Recinto?        @relation(fields: [recinto_id], references: [id])
+  raciones  Racion[]
+
+  creado_en       DateTime @default(now())
+  creado_por      String?
+  actualizado_en  DateTime @updatedAt
+  actualizado_por String?
+
+  @@index([categoria_id])
+  @@index([recinto_id])
+  @@map("animales")
+}
+
+model Alimento {
+  id             String  @id @default(uuid())
+  nombre         String
+  tipo           String? // concentrado, forraje, fruta, verdura...
+  unidad_medida  String  @default("kg") // kg, bulto, litro, unidad
+  costo_unitario Int? // COP por unidad_medida
+  existencia     Int? // stock actual (en unidad_medida)
+  activo         Boolean @default(true)
+
+  raciones Racion[]
+
+  creado_en       DateTime @default(now())
+  creado_por      String?
+  actualizado_en  DateTime @updatedAt
+  actualizado_por String?
+
+  @@map("alimentos")
+}
+
+// Dieta: qué come una categoría (o un animal específico) y en qué cantidad.
+model Racion {
+  id                  String  @id @default(uuid())
+  categoria_animal_id String?
+  animal_id           String?
+  alimento_id         String
+  cantidad            Int // en la unidad del alimento (o gramos, según convención)
+  unidad              String  @default("kg")
+  frecuencia          String  @default("diaria") // diaria, semanal...
+  observaciones       String?
+
+  categoria CategoriaAnimal? @relation(fields: [categoria_animal_id], references: [id])
+  animal    Animal?          @relation(fields: [animal_id], references: [id])
+  alimento  Alimento         @relation(fields: [alimento_id], references: [id])
+
+  creado_en       DateTime @default(now())
+  creado_por      String?
+  actualizado_en  DateTime @updatedAt
+  actualizado_por String?
+
+  @@index([categoria_animal_id])
+  @@index([animal_id])
+  @@map("raciones")
+}
+
+// ------------------------- EQUIPOS -------------------------
+
+enum EstadoEquipo {
+  operativo
+  en_mantenimiento
+  fuera_servicio
+  dado_de_baja
+}
+
+enum TipoMantenimiento {
+  preventivo
+  correctivo
+}
+
+enum EstadoMantenimiento {
+  programado
+  en_proceso
+  realizado
+  cancelado
+}
+
+model CategoriaEquipo {
+  id          String  @id @default(uuid())
+  nombre      String // Plantas eléctricas, Bombas, Aires acondicionados, Sonido...
+  descripcion String?
+  activo      Boolean @default(true)
+
+  equipos Equipo[]
+
+  creado_en       DateTime @default(now())
+  creado_por      String?
+  actualizado_en  DateTime @updatedAt
+  actualizado_por String?
+
+  @@map("categorias_equipo")
+}
+
+model Equipo {
+  id                String       @id @default(uuid())
+  nombre            String
+  codigo            String? // placa / consecutivo interno
+  categoria_id      String
+  area_id           String?
+  ubicacion         String?
+  marca             String?
+  modelo            String?
+  serie             String?
+  fecha_compra      DateTime?
+  fecha_instalacion DateTime?
+  estado            EstadoEquipo @default(operativo)
+  observaciones     String?
+  activo            Boolean      @default(true)
+
+  categoria      CategoriaEquipo       @relation(fields: [categoria_id], references: [id])
+  area           AreaTrabajo?          @relation(fields: [area_id], references: [id])
+  mantenimientos MantenimientoEquipo[]
+
+  creado_en       DateTime @default(now())
+  creado_por      String?
+  actualizado_en  DateTime @updatedAt
+  actualizado_por String?
+
+  @@index([categoria_id])
+  @@index([area_id])
+  @@map("equipos")
+}
+
+model MantenimientoEquipo {
+  id               String              @id @default(uuid())
+  equipo_id        String
+  tipo             TipoMantenimiento   @default(preventivo)
+  descripcion      String
+  fecha_programada DateTime?
+  fecha_realizada  DateTime?
+  costo            Int                 @default(0)
+  responsable      String? // empleado o proveedor (texto libre en el boceto)
+  estado           EstadoMantenimiento @default(programado)
+
+  equipo Equipo @relation(fields: [equipo_id], references: [id])
+
+  creado_en       DateTime @default(now())
+  creado_por      String?
+  actualizado_en  DateTime @updatedAt
+  actualizado_por String?
+
+  @@index([equipo_id])
+  @@index([estado])
+  @@map("mantenimientos_equipo")
+}
