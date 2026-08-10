@@ -4,6 +4,7 @@ import Image from "next/image";
 import { prisma } from "@/lib/db";
 import { obtenerSesion, tieneRol } from "@/lib/auth/sesion";
 import { qrDataUrl } from "@/lib/qr/generar";
+import { construirZpl } from "@/lib/impresion";
 import { formatearFechaHoraBogota } from "@/lib/tiempo";
 import ImprimirAcciones from "./ImprimirAcciones";
 
@@ -30,26 +31,44 @@ export default async function ImprimirVentaPage({ params }: { params: Promise<{ 
   const h = await headers();
   const origin = `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host") ?? "localhost:3000"}`;
 
-  // Aplanar manillas con su etiqueta e imagen QR.
+  const anulada = venta.estado === "anulada";
+
+  // Aplanar manillas con su etiqueta e imagen QR, y el ZPL para la impresora Zebra.
   const items = [];
+  const zpls: string[] = [];
   for (const d of venta.detalle) {
     for (const m of d.manillas) {
       const payload = `${m.codigo_uuid}.${m.firma_hmac}`;
+      const etiqueta = m.es_bebe ? "BEBÉ" : d.tipo_visitante.nombre.toUpperCase();
+      const emitida = formatearFechaHoraBogota(m.creado_en);
+      const valida = m.vencimiento ? formatearFechaHoraBogota(m.vencimiento) : "—";
+      const esCortesia = d.tipo_linea !== "pago";
       items.push({
         id: m.id,
-        etiqueta: m.es_bebe ? "BEBÉ" : d.tipo_visitante.nombre.toUpperCase(),
-        esCortesia: d.tipo_linea !== "pago",
+        etiqueta,
+        esCortesia,
         consecutivo: m.consecutivo,
         estado: m.estado,
-        emitida: formatearFechaHoraBogota(m.creado_en),
-        valida: m.vencimiento ? formatearFechaHoraBogota(m.vencimiento) : "—",
+        emitida,
+        valida,
         qr: await qrDataUrl(payload),
         qrConsent: await qrDataUrl(`${origin}/consentimiento/${payload}`),
       });
+      if (m.estado === "activa" && !anulada) {
+        zpls.push(construirZpl({
+          parque: PARQUE,
+          tipoVisitante: etiqueta,
+          consecutivo: m.consecutivo,
+          payloadQr: payload,
+          caja: venta.turno.caja.nombre,
+          cajero: venta.usuario.nombre,
+          emitida,
+          valida,
+          esCortesia,
+        }));
+      }
     }
   }
-
-  const anulada = venta.estado === "anulada";
 
   return (
     <main className="mx-auto max-w-3xl p-4">
@@ -73,7 +92,7 @@ export default async function ImprimirVentaPage({ params }: { params: Promise<{ 
       </header>
 
       <div className="no-print mb-4">
-        <ImprimirAcciones ventaId={venta.id} puedeSupervisar={tieneRol(s.rol, "supervisor")} anulada={anulada} />
+        <ImprimirAcciones ventaId={venta.id} puedeSupervisar={tieneRol(s.rol, "supervisor")} anulada={anulada} zpls={zpls} />
       </div>
 
       {/* Tickets 80mm */}
