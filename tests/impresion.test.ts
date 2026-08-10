@@ -46,7 +46,7 @@ describe("driver ZPL (Zebra)", () => {
 
   it("incrusta el payload firmado dentro del campo QR (ECC M)", () => {
     const zpl = construirZpl(base);
-    expect(zpl).toContain("^BQN,2,3,M");
+    expect(zpl).toContain("^BQN,2,4,M");
     expect(zpl).toContain("^FDMA,uuid-abc.firma-xyz^FS");
   });
 

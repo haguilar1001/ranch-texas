@@ -19,7 +19,7 @@ export const ZPL_GEO = {
   dpi: 203,
   ancho: 200, // puntos (~1")
   largo: 420, // puntos (~2.07")
-  qr: { x: 32, y: 116, magnif: 3, correccion: "M" as const }, // ECC M, igual que qrDataUrl
+  qr: { x: 26, y: 100, magnif: 4, correccion: "M" as const }, // ECC M, igual que qrDataUrl
 } as const;
 
 /** Quita caracteres de control de ZPL (^ ~ \) de un texto para no romper el formato. */
