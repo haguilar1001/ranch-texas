@@ -14,6 +14,7 @@ export default async function AdminPage() {
     ["📋 Reporte de ventas", "/admin/reportes/ventas", true],
     ["🧾 Gastos", "/admin/gastos", tieneRol(s.rol, "supervisor")],
     ["💰 Reporte de gastos / P&G", "/admin/reportes/gastos", true],
+    ["👤 Usuarios y perfiles", "/admin/usuarios", tieneRol(s.rol, "administrador")],
   ] as const;
 
   return (

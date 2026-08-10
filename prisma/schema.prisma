@@ -869,6 +869,7 @@ model Animal {
   codigo           String? // chapeta / identificador físico
   categoria_id     String
   recinto_id       String?
+  cantidad         Int          @default(1) // headcount del grupo/lote (1 = individuo)
   especie          String?
   raza             String?
   sexo             SexoAnimal   @default(desconocido)

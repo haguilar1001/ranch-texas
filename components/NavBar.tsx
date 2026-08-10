@@ -18,6 +18,7 @@ export default async function NavBar() {
     ["Animales", "/admin/animales", tieneRol(s.rol, "supervisor")],
     ["Equipos", "/admin/equipos", tieneRol(s.rol, "supervisor")],
     ["Gastos", "/admin/gastos", tieneRol(s.rol, "supervisor")],
+    ["Usuarios", "/admin/usuarios", tieneRol(s.rol, "administrador")],
   ] as [string, string, boolean][])
     .filter(([, , ver]) => ver)
     .map(([l, h]) => [l, h] as [string, string]);
@@ -33,10 +34,10 @@ export default async function NavBar() {
         <NavLinks links={links} />
 
         <div className="ml-auto flex items-center gap-3">
-          <span className="hidden text-right text-xs leading-tight text-ranch-marron/60 sm:block">
+          <Link href="/perfil" title="Mi cuenta" className="hidden text-right text-xs leading-tight text-ranch-marron/60 hover:text-ranch-marron sm:block">
             {s.nombre}<br />
             <span className="text-ranch-marron/40">{s.rol}</span>
-          </span>
+          </Link>
           <form action={logout}>
             <button className="rounded-lg border border-ranch-marron/30 px-3 py-1.5 text-sm font-semibold text-ranch-marron hover:bg-ranch-marron/10">
               Salir

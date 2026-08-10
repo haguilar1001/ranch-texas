@@ -78,6 +78,19 @@ Registro de decisiones tomadas y pendientes. Fecha de referencia inicial: 2026-0
 - Calidad de datos del origen (Ranch Texas): granularidad mixta (2020–2021 mensual, 2023–2024 diaria);
   1.465 filas sin valor omitidas. Revisar antes de usar en reportes oficiales.
 
+### Inventario de animales (Excel + infografía)
+- Fuente: `D:\Escritorio\INVENTARIO ANIMALES RANCH.xlsx` (hoja "LISTADO CABALLOS", que en realidad es
+  el censo general) + infografía de consumo mensual de alimento.
+- El censo viene **por grupo con cantidad** (no por individuo): PATOS 47, PECES KOY 300 (aprox.),
+  GALLINAS PONEDORAS 96, etc. → se agregó `Animal.cantidad` (default 1 = individuo). **29 grupos,
+  683 cabezas** (Mojarras sin cantidad, por confirmar).
+- Categorías derivadas: Caninos, Bovinos, Caprinos, Ovinos, Aves de corral, Aves ornamentales,
+  Lagomorfos, Peces, Reptiles, Fauna silvestre. Tigrilla y Ocelote marcados "pendiente entregar a
+  Amigos de la Fauna" (fauna silvestre, no de exhibición permanente).
+- Alimento (9 ítems con costo por bulto/kg, consumo mensual $5.357.000). **Por confirmar:**
+  unidad/costo unitario de **Acuatilapia** (solo total $305.000/mes) y desglose de "Aves en general".
+- Carga idempotente con `npm run import:animales` (reemplaza los animales inventados de `seed:boceto`).
+
 ## Decisiones técnicas a resolver en su fase
 - `roles`: enum fijo (5 roles) vs. tabla configurable de permisos. Arranca como enum.
 - Consecutivo de venta/manilla: ¿por caja, por día, global? (afecta reimpresión y facturación futura).

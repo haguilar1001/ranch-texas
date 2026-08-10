@@ -37,9 +37,18 @@ Administración) y crear los **maestros/parámetros** que luego se afinan con da
       (`npm run seed:boceto`), idempotente.
 - [x] Verificado: **typecheck limpio, 51 tests verdes, build de producción OK (25 rutas + middleware)**.
 
+- [x] **Inventario REAL de animales cargado** (2026-08-10): desde `INVENTARIO ANIMALES RANCH.xlsx`
+      (29 grupos, **683 cabezas**) + consumo mensual de alimento de la infografía (9 alimentos,
+      $5.357.000/mes). Nuevo campo `Animal.cantidad` (migración `20260810180000_animal_cantidad`)
+      para censo por grupo/lote. Importador idempotente `scripts/import-inventario-animales.ts`
+      (`npm run import:animales`). Página `/admin/animales` muestra cabezas, cantidad por grupo y
+      raciones por grupo/categoría. Reemplaza los animales inventados de `seed:boceto`.
+
 Pendiente para afinar (con el responsable):
-- Aplicar en su máquina/Railway: `npm run db:up && npm run prisma:migrate && npm run seed:boceto`
+- Aplicar en su máquina/Railway: `npm run db:up && npm run prisma:migrate && npm run import:animales`
   (en este entorno no hay Docker/BD, el código quedó listo y validado).
+- Confirmar lecturas ambiguas del alimento: unidad/costo unitario de **Acuatilapia** (solo hay
+  $305.000/mes) y el desglose de "Aves en general" (6 bultos Maíz Molido + 2 Prepico = $580.000/mes).
 - **Formularios de captura/edición** (CRUD) por módulo — hoy son listas de solo lectura.
 - **Carga por Excel** de cada maestro (plantillas por definir con las columnas = campos del modelo).
 - Atracciones que **NO** exigen consentimiento (piscinas, zonas, etc.) — falta la lista completa (P1).
