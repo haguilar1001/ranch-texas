@@ -24,7 +24,8 @@ export default function DiaNav({ fecha }: { fecha: string }) {
         className="rounded-lg border border-ranch-marron/30 px-3 py-1.5 text-sm text-ranch-marron"
       />
       <button onClick={() => desplazar(1)} className="rounded-lg border border-ranch-marron/30 px-3 py-1.5 text-sm font-semibold text-ranch-marron hover:bg-white">Día siguiente →</button>
-      <button onClick={() => window.print()} className="ml-auto rounded-lg bg-ranch-marron px-4 py-1.5 text-sm font-semibold text-ranch-crema hover:bg-ranch-marron-oscuro">🖨️ Imprimir</button>
+      <a href={`/admin/cuadre/csv?fecha=${fecha}`} className="ml-auto rounded-lg border border-ranch-marron/30 px-4 py-1.5 text-sm font-semibold text-ranch-marron hover:bg-white">⬇️ CSV</a>
+      <button onClick={() => window.print()} className="rounded-lg bg-ranch-marron px-4 py-1.5 text-sm font-semibold text-ranch-crema hover:bg-ranch-marron-oscuro">🖨️ Imprimir</button>
     </div>
   );
 }
