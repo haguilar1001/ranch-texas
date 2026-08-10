@@ -1,0 +1,44 @@
+import { redirect } from "next/navigation";
+import { prisma } from "@/lib/db";
+import { obtenerSesion, tieneRol } from "@/lib/auth/sesion";
+import { formatearFechaHoraBogota } from "@/lib/tiempo";
+import TarifasClient from "./TarifasClient";
+
+export const dynamic = "force-dynamic";
+
+export default async function TarifasPage() {
+  const s = await obtenerSesion();
+  if (!s) redirect("/login");
+  if (!tieneRol(s.rol, "administrador")) {
+    return <main className="p-6"><p className="rounded bg-red-50 px-4 py-3 text-red-700">Solo los administradores pueden gestionar tipos y tarifas.</p></main>;
+  }
+
+  const tiposRaw = await prisma.tipoVisitante.findMany({
+    orderBy: [{ activo: "desc" }, { orden: "asc" }],
+    include: { tarifas: { orderBy: { vigente_desde: "desc" } } },
+  });
+
+  const tipos = tiposRaw.map((t) => {
+    const vigente = t.tarifas.find((x) => x.vigente_hasta === null) ?? t.tarifas[0] ?? null;
+    return {
+      id: t.id,
+      codigo: t.codigo,
+      nombre: t.nombre,
+      requiere_pago: t.requiere_pago,
+      edad_min: t.edad_min,
+      edad_max: t.edad_max,
+      orden: t.orden,
+      activo: t.activo,
+      valorVigente: vigente?.valor ?? 0,
+      vigenteDesde: vigente ? formatearFechaHoraBogota(vigente.vigente_desde) : "—",
+      historial: t.tarifas.map((x) => ({
+        valor: x.valor,
+        desde: formatearFechaHoraBogota(x.vigente_desde),
+        hasta: x.vigente_hasta ? formatearFechaHoraBogota(x.vigente_hasta) : null,
+        motivo: x.motivo_cambio ?? "",
+      })),
+    };
+  });
+
+  return <TarifasClient tipos={tipos} />;
+}

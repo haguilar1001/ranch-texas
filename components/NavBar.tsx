@@ -18,6 +18,7 @@ export default async function NavBar() {
     ["Animales", "/admin/animales", tieneRol(s.rol, "supervisor")],
     ["Equipos", "/admin/equipos", tieneRol(s.rol, "supervisor")],
     ["Gastos", "/admin/gastos", tieneRol(s.rol, "supervisor")],
+    ["Tarifas", "/admin/tarifas", tieneRol(s.rol, "administrador")],
     ["Usuarios", "/admin/usuarios", tieneRol(s.rol, "administrador")],
   ] as [string, string, boolean][])
     .filter(([, , ver]) => ver)
