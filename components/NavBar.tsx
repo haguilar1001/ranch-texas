@@ -11,6 +11,7 @@ export default async function NavBar() {
     ["Inicio", "/", true],
     ["Taquilla", "/taquilla", tieneRol(s.rol, "cajero")],
     ["Caja", "/caja/turno", tieneRol(s.rol, "cajero")],
+    ["Cuadre", "/admin/cuadre", tieneRol(s.rol, "supervisor")],
     ["Escaneo", "/escaneo", tieneRol(s.rol, "control_acceso")],
     ["Ventas", "/admin/dashboard", tieneRol(s.rol, "consulta")],
     ["Accesos", "/admin/accesos", tieneRol(s.rol, "consulta")],
