@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { obtenerSesion, tieneRol } from "@/lib/auth/sesion";
 import { qrDataUrl } from "@/lib/qr/generar";
 import { construirZpl } from "@/lib/impresion";
-import { formatearFechaHoraBogota } from "@/lib/tiempo";
+import { formatearFechaHoraBogota, formatearFechaHoraCortaBogota } from "@/lib/tiempo";
 import ImprimirAcciones from "./ImprimirAcciones";
 
 export const dynamic = "force-dynamic";
@@ -62,8 +62,8 @@ export default async function ImprimirVentaPage({ params }: { params: Promise<{ 
           payloadQr: payload,
           caja: venta.turno.caja.nombre,
           cajero: venta.usuario.nombre,
-          emitida,
-          valida,
+          emitida: formatearFechaHoraCortaBogota(m.creado_en),
+          valida: m.vencimiento ? formatearFechaHoraCortaBogota(m.vencimiento) : "—",
           esCortesia,
         }));
       }

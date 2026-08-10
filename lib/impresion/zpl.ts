@@ -18,7 +18,7 @@ export { textoManilla };
 export const ZPL_GEO = {
   dpi: 203,
   ancho: 200, // puntos (~1")
-  largo: 380, // puntos (~1.9")
+  largo: 420, // puntos (~2.07")
   qr: { x: 32, y: 116, magnif: 3, correccion: "M" as const }, // ECC M, igual que qrDataUrl
 } as const;
 
@@ -50,10 +50,12 @@ export function construirZpl(datos: DatosManilla): string {
     campoCentrado(0, 12, 24, datos.parque.toUpperCase()),
     campoCentrado(0, 44, 46, etiqueta),
     `^FO${qr.x},${qr.y}^BQN,2,${qr.magnif},${qr.correccion}^FDMA,${payload}^FS`,
-    campoCentrado(0, 262, 34, datos.consecutivo),
-    campoCentrado(0, 300, 20, `Emitida: ${datos.emitida}`),
-    campoCentrado(0, 322, 20, `Válida: ${datos.valida}`),
-    campoCentrado(0, 346, 18, `${datos.caja} · ${datos.cajero}`),
+    campoCentrado(0, 256, 34, datos.consecutivo),
+    campoCentrado(0, 300, 15, "EMITIDA"),
+    campoCentrado(0, 318, 22, datos.emitida),
+    campoCentrado(0, 348, 15, "VÁLIDA HASTA"),
+    campoCentrado(0, 366, 22, datos.valida),
+    campoCentrado(0, 398, 16, `${datos.caja} · ${datos.cajero}`),
     "^XZ",
   ];
   return lineas.join("\n");

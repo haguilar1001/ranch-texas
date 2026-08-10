@@ -34,3 +34,20 @@ export function formatearFechaHoraBogota(d: Date): string {
     timeStyle: "short",
   }).format(d);
 }
+
+/** Fecha/hora COMPACTA (dd/MM/yy HH:mm) para la manilla angosta (1"). Cabe en el ancho de la banda. */
+export function formatearFechaHoraCortaBogota(d: Date): string {
+  return new Intl.DateTimeFormat("es-CO", {
+    timeZone: TZ,
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  })
+    .format(d)
+    .replace(/,/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
