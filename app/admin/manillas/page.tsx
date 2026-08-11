@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { obtenerSesion, tieneRol } from "@/lib/auth/sesion";
 import { buscarManillas } from "@/lib/manillas/buscar";
 import BuscadorForm from "./BuscadorForm";
+import FilaAcciones from "./FilaAcciones";
 
 export const dynamic = "force-dynamic";
 
@@ -62,7 +62,7 @@ export default async function ManillasPage({ searchParams }: { searchParams: Pro
                     <td className="text-xs text-ranch-marron/50">{m.emitida}</td>
                     <td className="text-xs text-ranch-marron/50">{m.vence}</td>
                     <td className="text-right">
-                      <Link href={`/imprimir/venta/${m.ventaId}`} className="text-xs font-semibold text-ranch-dorado hover:underline">abrir venta →</Link>
+                      <FilaAcciones manillaId={m.id} ventaId={m.ventaId} estado={m.estado} puedeAnular />
                     </td>
                   </tr>
                 ))}
