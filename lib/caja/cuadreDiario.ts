@@ -1,10 +1,13 @@
 import { prisma } from "../db";
-import { resumenTurno, type ResumenTurno, type LineaMedio, type LineaTipo } from "./resumen";
+import type { LineaMedio, LineaTipo } from "./resumen";
 import { formatearFechaHoraBogota } from "../tiempo";
 
-// Cuadre diario CONSOLIDADO: agrupa todos los turnos de un mismo día operativo (varias cajas y
-// cajeros) en un solo resumen. El "día operativo" se define por la fecha (America/Bogota) en que
-// se ABRIÓ el turno. La consolidación es pura y testeable; la consulta a BD reutiliza resumenTurno.
+// Cuadre diario CONSOLIDADO por FECHA DE LA VENTA (creado_en, hora Bogota): agrupa lo que se
+// vendió y recaudó ese día calendario, sin importar cuándo se abrió el turno. Así una venta
+// aparece siempre en el día en que ocurrió (evita sorpresas si un turno queda abierto varios días).
+//
+// El arqueo del cajón (base inicial, efectivo contado, diferencia) NO va aquí: es un concepto de
+// cierre POR TURNO (se cuenta el cajón al cerrar) y vive en el cuadre por turno.
 
 export interface EntradaTurnoDia {
   turnoId: string;
@@ -13,9 +16,15 @@ export interface EntradaTurnoDia {
   estado: string; // abierto | reabierto | cerrado
   abiertoEn: string;
   cerradoEn: string | null;
-  resumen: ResumenTurno;
-  efectivoContado: number | null;
-  diferencia: number | null;
+  numVentas: number;
+  totalVentas: number;
+  asistentes: number;
+  cortesias: number;
+  ventasPorMedio: LineaMedio[];
+  ventasPorTipo: LineaTipo[];
+  ventasEfectivo: number;
+  otrosIngresos: number;
+  egresos: number;
 }
 
 export interface DetalleTurnoDia {
@@ -26,14 +35,12 @@ export interface DetalleTurnoDia {
   abiertoEn: string;
   cerradoEn: string | null;
   totalVentas: number;
-  esperado: number;
-  contado: number | null;
-  diferencia: number | null;
+  ventasEfectivo: number;
 }
 
 export interface ConsolidadoDia {
   fecha: string;
-  turnos: number;
+  turnos: number; // turnos con actividad ese día
   turnosCerrados: number;
   turnosAbiertos: number;
   numVentas: number;
@@ -43,18 +50,15 @@ export interface ConsolidadoDia {
   anuladas: number;
   ventasPorMedio: LineaMedio[];
   ventasPorTipo: LineaTipo[];
-  baseInicial: number;
   ventasEfectivo: number;
   otrosIngresos: number;
   egresos: number;
-  esperadoEfectivo: number;
-  efectivoContado: number; // solo turnos cerrados
-  diferencia: number; // solo turnos cerrados
+  efectivoRecaudado: number; // ventas efectivo + otros ingresos − egresos (sin base)
   detalle: DetalleTurnoDia[];
 }
 
-/** Consolida (PURO) los resúmenes de varios turnos en el cuadre de un día. Todo en enteros COP. */
-export function consolidarDia(fecha: string, entradas: EntradaTurnoDia[]): ConsolidadoDia {
+/** Consolida (PURO) las ventas de un día por turno. Todo en enteros COP. */
+export function consolidarDia(fecha: string, entradas: EntradaTurnoDia[], anuladas: number): ConsolidadoDia {
   const porMedio = new Map<string, LineaMedio>();
   const porTipo = new Map<string, LineaTipo>();
 
@@ -67,48 +71,34 @@ export function consolidarDia(fecha: string, entradas: EntradaTurnoDia[]): Conso
     totalVentas: 0,
     asistentes: 0,
     cortesias: 0,
-    anuladas: 0,
+    anuladas,
     ventasPorMedio: [],
     ventasPorTipo: [],
-    baseInicial: 0,
     ventasEfectivo: 0,
     otrosIngresos: 0,
     egresos: 0,
-    esperadoEfectivo: 0,
-    efectivoContado: 0,
-    diferencia: 0,
+    efectivoRecaudado: 0,
     detalle: [],
   };
 
   for (const e of entradas) {
-    const r = e.resumen;
-    const cerrado = e.estado === "cerrado";
-    if (cerrado) acc.turnosCerrados += 1;
+    if (e.estado === "cerrado") acc.turnosCerrados += 1;
     else acc.turnosAbiertos += 1;
 
-    acc.numVentas += r.numVentas;
-    acc.totalVentas += r.totalVentas;
-    acc.asistentes += r.asistentes;
-    acc.cortesias += r.cortesias;
-    acc.anuladas += r.anuladas;
-    acc.baseInicial += r.base_inicial;
-    acc.ventasEfectivo += r.ventasEfectivo;
-    acc.otrosIngresos += r.otrosIngresos;
-    acc.egresos += r.egresos;
-    acc.esperadoEfectivo += r.esperadoEfectivo;
+    acc.numVentas += e.numVentas;
+    acc.totalVentas += e.totalVentas;
+    acc.asistentes += e.asistentes;
+    acc.cortesias += e.cortesias;
+    acc.ventasEfectivo += e.ventasEfectivo;
+    acc.otrosIngresos += e.otrosIngresos;
+    acc.egresos += e.egresos;
 
-    // El contado y la diferencia solo tienen sentido en turnos cerrados.
-    if (cerrado) {
-      acc.efectivoContado += e.efectivoContado ?? 0;
-      acc.diferencia += e.diferencia ?? 0;
-    }
-
-    for (const m of r.ventasPorMedio) {
+    for (const m of e.ventasPorMedio) {
       const prev = porMedio.get(m.codigo);
       if (prev) prev.total += m.total;
       else porMedio.set(m.codigo, { ...m });
     }
-    for (const t of r.ventasPorTipo) {
+    for (const t of e.ventasPorTipo) {
       const prev = porTipo.get(t.tipo);
       if (prev) { prev.cantidad += t.cantidad; prev.total += t.total; }
       else porTipo.set(t.tipo, { ...t });
@@ -121,19 +111,18 @@ export function consolidarDia(fecha: string, entradas: EntradaTurnoDia[]): Conso
       estado: e.estado,
       abiertoEn: e.abiertoEn,
       cerradoEn: e.cerradoEn,
-      totalVentas: r.totalVentas,
-      esperado: r.esperadoEfectivo,
-      contado: cerrado ? e.efectivoContado ?? 0 : null,
-      diferencia: cerrado ? e.diferencia ?? 0 : null,
+      totalVentas: e.totalVentas,
+      ventasEfectivo: e.ventasEfectivo,
     });
   }
 
+  acc.efectivoRecaudado = acc.ventasEfectivo + acc.otrosIngresos - acc.egresos;
   acc.ventasPorMedio = [...porMedio.values()].sort((a, b) => b.total - a.total);
   acc.ventasPorTipo = [...porTipo.values()].sort((a, b) => b.total - a.total);
   return acc;
 }
 
-/** Límites del día operativo (00:00:00 a 23:59:59.999 hora Bogotá) para una fecha YYYY-MM-DD. */
+/** Límites del día (00:00:00 a 23:59:59.999 hora Bogotá) para una fecha YYYY-MM-DD. */
 export function limitesDiaOperativo(fecha: string): { inicio: Date; fin: Date } {
   return {
     inicio: new Date(`${fecha}T00:00:00.000-05:00`),
@@ -141,29 +130,107 @@ export function limitesDiaOperativo(fecha: string): { inicio: Date; fin: Date } 
   };
 }
 
-/** Cuadre diario consolidado de todos los turnos abiertos en la fecha dada (YYYY-MM-DD, Bogotá). */
+interface AccTurno {
+  numVentas: number;
+  totalVentas: number;
+  asistentes: number;
+  cortesias: number;
+  medio: Map<string, LineaMedio>;
+  tipo: Map<string, LineaTipo>;
+  ventasEfectivo: number;
+  otrosIngresos: number;
+  egresos: number;
+}
+
+/** Cuadre diario consolidado de todas las ventas ocurridas en la fecha dada (YYYY-MM-DD, Bogotá). */
 export async function cuadreDiario(fecha: string): Promise<ConsolidadoDia> {
   const { inicio, fin } = limitesDiaOperativo(fecha);
-  const turnos = await prisma.turnoCaja.findMany({
-    where: { abierto_en: { gte: inicio, lte: fin } },
-    include: { caja: true, usuario: { select: { nombre: true } } },
-    orderBy: [{ caja: { nombre: "asc" } }, { abierto_en: "asc" }],
-  });
+  const rango = { gte: inicio, lte: fin };
 
-  const entradas: EntradaTurnoDia[] = [];
-  for (const t of turnos) {
-    entradas.push({
-      turnoId: t.id,
-      caja: t.caja.nombre,
-      usuario: t.usuario.nombre,
-      estado: t.estado,
-      abiertoEn: formatearFechaHoraBogota(t.abierto_en),
-      cerradoEn: t.cerrado_en ? formatearFechaHoraBogota(t.cerrado_en) : null,
-      resumen: await resumenTurno(t.id),
-      efectivoContado: t.efectivo_contado,
-      diferencia: t.diferencia,
-    });
+  const [ventas, anuladas, movs, medios] = await Promise.all([
+    prisma.venta.findMany({
+      where: { creado_en: rango, estado: "completada" },
+      select: {
+        total_cobrado: true, total_descuento: true, cantidad_asistentes: true, turno_id: true,
+        pagos: { select: { monto: true, medio_pago_id: true } },
+        detalle: { select: { cantidad: true, valor_cobrado: true, tipo_visitante: { select: { nombre: true } } } },
+      },
+    }),
+    prisma.venta.count({ where: { creado_en: rango, estado: "anulada" } }),
+    prisma.movimientoCaja.findMany({ where: { creado_en: rango }, select: { tipo: true, monto: true, turno_id: true } }),
+    prisma.medioPago.findMany({ select: { id: true, nombre: true, codigo: true, es_efectivo: true } }),
+  ]);
+
+  const medioMap = new Map(medios.map((m) => [m.id, m]));
+  const porTurno = new Map<string, AccTurno>();
+  const ensure = (id: string): AccTurno => {
+    let a = porTurno.get(id);
+    if (!a) {
+      a = { numVentas: 0, totalVentas: 0, asistentes: 0, cortesias: 0, medio: new Map(), tipo: new Map(), ventasEfectivo: 0, otrosIngresos: 0, egresos: 0 };
+      porTurno.set(id, a);
+    }
+    return a;
+  };
+
+  for (const v of ventas) {
+    const a = ensure(v.turno_id);
+    a.numVentas += 1;
+    a.totalVentas += v.total_cobrado;
+    a.asistentes += v.cantidad_asistentes;
+    a.cortesias += v.total_descuento;
+    for (const p of v.pagos) {
+      const m = medioMap.get(p.medio_pago_id);
+      if (!m) continue;
+      const line = a.medio.get(m.codigo) ?? { medio: m.nombre, codigo: m.codigo, es_efectivo: m.es_efectivo, total: 0 };
+      line.total += p.monto;
+      a.medio.set(m.codigo, line);
+      if (m.es_efectivo) a.ventasEfectivo += p.monto;
+    }
+    for (const d of v.detalle) {
+      const k = d.tipo_visitante.nombre;
+      const line = a.tipo.get(k) ?? { tipo: k, cantidad: 0, total: 0 };
+      line.cantidad += d.cantidad;
+      line.total += d.valor_cobrado * d.cantidad;
+      a.tipo.set(k, line);
+    }
   }
 
-  return consolidarDia(fecha, entradas);
+  for (const mv of movs) {
+    const a = ensure(mv.turno_id);
+    if (mv.tipo === "ingreso") a.otrosIngresos += mv.monto;
+    else if (mv.tipo === "egreso") a.egresos += mv.monto;
+  }
+
+  const turnoIds = [...porTurno.keys()];
+  const turnos = turnoIds.length
+    ? await prisma.turnoCaja.findMany({
+        where: { id: { in: turnoIds } },
+        select: { id: true, estado: true, abierto_en: true, cerrado_en: true, caja: { select: { nombre: true } }, usuario: { select: { nombre: true } } },
+      })
+    : [];
+  const turnoInfo = new Map(turnos.map((t) => [t.id, t]));
+
+  const entradas: EntradaTurnoDia[] = turnoIds.map((id) => {
+    const a = porTurno.get(id)!;
+    const t = turnoInfo.get(id);
+    return {
+      turnoId: id,
+      caja: t?.caja.nombre ?? "—",
+      usuario: t?.usuario.nombre ?? "—",
+      estado: t?.estado ?? "—",
+      abiertoEn: t ? formatearFechaHoraBogota(t.abierto_en) : "—",
+      cerradoEn: t?.cerrado_en ? formatearFechaHoraBogota(t.cerrado_en) : null,
+      numVentas: a.numVentas,
+      totalVentas: a.totalVentas,
+      asistentes: a.asistentes,
+      cortesias: a.cortesias,
+      ventasPorMedio: [...a.medio.values()],
+      ventasPorTipo: [...a.tipo.values()],
+      ventasEfectivo: a.ventasEfectivo,
+      otrosIngresos: a.otrosIngresos,
+      egresos: a.egresos,
+    };
+  });
+
+  return consolidarDia(fecha, entradas, anuladas);
 }

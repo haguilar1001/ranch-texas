@@ -21,9 +21,6 @@ export default async function CuadreDiaPage({ searchParams }: { searchParams: Pr
   const fecha = sp.fecha && ES_FECHA.test(sp.fecha) ? sp.fecha : fechaBogota();
   const c = await cuadreDiario(fecha);
 
-  const dif = c.diferencia;
-  const todoCerrado = c.turnos > 0 && c.turnosAbiertos === 0;
-
   const Fila = ({ k, v, fuerte }: { k: string; v: string; fuerte?: boolean }) => (
     <div className={`flex justify-between py-1 text-sm ${fuerte ? "font-bold text-ranch-marron" : "text-ranch-marron/80"}`}>
       <span>{k}</span><span>{v}</span>
@@ -35,29 +32,23 @@ export default async function CuadreDiaPage({ searchParams }: { searchParams: Pr
       <style>{`@media print { .no-print { display:none !important } @page { margin: 12mm } }`}</style>
 
       <h1 className="mb-1 text-2xl font-black text-ranch-marron">Cuadre diario consolidado</h1>
-      <p className="mb-3 text-sm text-ranch-marron/60">Todos los turnos y cajas abiertos el {fecha} (día operativo, hora Bogotá).</p>
+      <p className="mb-3 text-sm text-ranch-marron/60">Ventas y efectivo recaudado el {fecha}, por fecha de la venta (hora Bogotá).</p>
 
       <DiaNav fecha={fecha} />
 
       {c.turnos === 0 ? (
         <div className="rounded-xl border-2 border-dashed border-ranch-marron/30 bg-white p-8 text-center text-ranch-marron/60">
-          No hay turnos abiertos ese día.
+          No hubo ventas ese día.
         </div>
       ) : (
         <>
-          {c.turnosAbiertos > 0 && (
-            <p className="no-print mb-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
-              ⚠️ Hay {c.turnosAbiertos} turno(s) sin cerrar. El efectivo contado y la diferencia solo suman los turnos cerrados.
-            </p>
-          )}
-
           {/* KPIs */}
           <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
               { t: "Total ventas", v: formatearCOP(c.totalVentas) },
               { t: "Asistentes", v: String(c.asistentes) },
               { t: "N.° ventas", v: String(c.numVentas) },
-              { t: "Turnos", v: `${c.turnosCerrados}/${c.turnos} cerrados` },
+              { t: "Turnos con actividad", v: String(c.turnos) },
             ].map((k) => (
               <div key={k.t} className="rounded-xl border-2 border-ranch-marron/15 bg-white p-3">
                 <p className="text-xs text-ranch-marron/50">{k.t}</p>
@@ -82,21 +73,15 @@ export default async function CuadreDiaPage({ searchParams }: { searchParams: Pr
           </div>
 
           <section className="mt-4 rounded-xl border-2 border-ranch-marron/20 bg-white p-4">
-            <h2 className="mb-1 border-b border-ranch-marron/15 pb-1 text-sm font-bold text-ranch-marron">Efectivo consolidado</h2>
-            <Fila k="Base inicial (todas las cajas)" v={formatearCOP(c.baseInicial)} />
-            <Fila k="+ Ventas en efectivo" v={formatearCOP(c.ventasEfectivo)} />
+            <h2 className="mb-1 border-b border-ranch-marron/15 pb-1 text-sm font-bold text-ranch-marron">Efectivo recaudado en el día</h2>
+            <Fila k="Ventas en efectivo" v={formatearCOP(c.ventasEfectivo)} />
             <Fila k="+ Otros ingresos" v={formatearCOP(c.otrosIngresos)} />
             <Fila k="− Egresos" v={formatearCOP(c.egresos)} />
-            <Fila k="Efectivo esperado" v={formatearCOP(c.esperadoEfectivo)} fuerte />
-            <Fila k="Efectivo contado (turnos cerrados)" v={formatearCOP(c.efectivoContado)} fuerte />
-            {todoCerrado ? (
-              <div className={`flex justify-between border-t border-ranch-marron/15 py-1 text-base font-black ${dif === 0 ? "text-ranch-verde" : "text-red-600"}`}>
-                <span>{dif === 0 ? "Cuadra" : dif > 0 ? "Sobrante" : "Faltante"}</span>
-                <span>{formatearCOP(Math.abs(dif))}</span>
-              </div>
-            ) : (
-              <p className="mt-1 text-xs text-ranch-marron/50">La diferencia consolidada se calcula cuando todos los turnos del día están cerrados.</p>
-            )}
+            <div className="flex justify-between border-t border-ranch-marron/15 py-1 text-base font-black text-ranch-marron">
+              <span>Efectivo recaudado</span>
+              <span>{formatearCOP(c.efectivoRecaudado)}</span>
+            </div>
+            <p className="mt-1 text-xs text-ranch-marron/50">El arqueo del cajón (base, contado, diferencia) se hace por turno, en su cuadre.</p>
             {(c.cortesias > 0 || c.anuladas > 0) && (
               <div className="mt-2 border-t border-ranch-marron/15 pt-2">
                 {c.cortesias > 0 && <Fila k="Cortesías/descuentos (no cobrado)" v={formatearCOP(c.cortesias)} />}
@@ -113,8 +98,7 @@ export default async function CuadreDiaPage({ searchParams }: { searchParams: Pr
                 <thead>
                   <tr className="text-left text-ranch-marron/60">
                     <th className="py-1">Caja</th><th>Cajero</th><th>Estado</th>
-                    <th className="text-right">Ventas</th><th className="text-right">Esperado</th>
-                    <th className="text-right">Contado</th><th className="text-right">Dif.</th><th></th>
+                    <th className="text-right">Ventas del día</th><th className="text-right">Efectivo</th><th></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -128,11 +112,7 @@ export default async function CuadreDiaPage({ searchParams }: { searchParams: Pr
                         </span>
                       </td>
                       <td className="text-right">{formatearCOP(d.totalVentas)}</td>
-                      <td className="text-right text-ranch-marron/70">{formatearCOP(d.esperado)}</td>
-                      <td className="text-right text-ranch-marron/70">{d.contado === null ? "—" : formatearCOP(d.contado)}</td>
-                      <td className={`text-right font-semibold ${d.diferencia === null ? "text-ranch-marron/40" : d.diferencia === 0 ? "text-ranch-verde" : "text-red-600"}`}>
-                        {d.diferencia === null ? "—" : formatearCOP(d.diferencia)}
-                      </td>
+                      <td className="text-right text-ranch-marron/70">{formatearCOP(d.ventasEfectivo)}</td>
                       <td className="text-right">
                         <Link href={`/caja/cuadre/${d.turnoId}`} className="no-print text-xs text-ranch-dorado hover:underline">ver</Link>
                       </td>

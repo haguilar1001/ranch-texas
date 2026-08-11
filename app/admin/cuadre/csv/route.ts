@@ -15,9 +15,9 @@ export async function GET(req: Request) {
   const c = await cuadreDiario(fecha);
 
   const filas: string[][] = [
-    ["Cuadre diario consolidado"],
-    ["Fecha (dia operativo)", fecha],
-    ["Turnos", String(c.turnos), "Cerrados", String(c.turnosCerrados), "Abiertos", String(c.turnosAbiertos)],
+    ["Cuadre diario consolidado (por fecha de venta)"],
+    ["Fecha", fecha],
+    ["Turnos con actividad", String(c.turnos), "Cerrados", String(c.turnosCerrados), "Abiertos", String(c.turnosAbiertos)],
     [],
     ["Ventas por medio de pago", "Total"],
     ...c.ventasPorMedio.map((m) => [m.medio, String(m.total)]),
@@ -26,14 +26,11 @@ export async function GET(req: Request) {
     ["Ventas por tipo", "Cantidad", "Total"],
     ...c.ventasPorTipo.map((t) => [t.tipo, String(t.cantidad), String(t.total)]),
     [],
-    ["Efectivo consolidado", "Valor"],
-    ["Base inicial (todas las cajas)", String(c.baseInicial)],
+    ["Efectivo recaudado en el dia", "Valor"],
     ["Ventas efectivo", String(c.ventasEfectivo)],
     ["Otros ingresos", String(c.otrosIngresos)],
     ["Egresos", String(c.egresos)],
-    ["Efectivo esperado", String(c.esperadoEfectivo)],
-    ["Efectivo contado (turnos cerrados)", String(c.efectivoContado)],
-    ["Diferencia (turnos cerrados)", c.turnosAbiertos === 0 ? String(c.diferencia) : "parcial: hay turnos abiertos"],
+    ["Efectivo recaudado", String(c.efectivoRecaudado)],
     [],
     ["Cortesias/descuentos (no cobrado)", String(c.cortesias)],
     ["Ventas anuladas", String(c.anuladas)],
@@ -41,7 +38,7 @@ export async function GET(req: Request) {
     ["Numero de ventas", String(c.numVentas)],
     [],
     ["Detalle por turno"],
-    ["Caja", "Cajero", "Estado", "Abierto", "Cerrado", "Ventas", "Esperado", "Contado", "Diferencia"],
+    ["Caja", "Cajero", "Estado", "Abierto", "Cerrado", "Ventas del dia", "Efectivo del dia"],
     ...c.detalle.map((d) => [
       d.caja,
       d.usuario,
@@ -49,9 +46,7 @@ export async function GET(req: Request) {
       d.abiertoEn,
       d.cerradoEn ?? "",
       String(d.totalVentas),
-      String(d.esperado),
-      d.contado === null ? "" : String(d.contado),
-      d.diferencia === null ? "" : String(d.diferencia),
+      String(d.ventasEfectivo),
     ]),
   ];
 
