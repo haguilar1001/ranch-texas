@@ -42,6 +42,29 @@ Registro de decisiones tomadas y pendientes. Fecha de referencia inicial: 2026-0
   solo lleva banderas informativas; no bloquea la operación. (Futuro: bandera/tabla `eventos` para
   analizar días de evento en Power BI.)
 
+### Caja, cuadre e impresión de manilla
+- **Cuadre diario consolidado por FECHA DE LA VENTA** ✅ *(2026-08-10):* el consolidado del día agrupa
+  las ventas por su `creado_en` (día calendario, hora Bogotá), **no** por la fecha de apertura del turno.
+  Así una venta aparece siempre en el día en que ocurrió, aunque el turno lleve días abierto (evita que
+  se "pierda" del día si alguien no cerró caja). Ventana del día: 00:00:00 a 23:59:59.999 America/Bogota.
+- **Arqueo del cajón por turno, no en el consolidado** ✅ *(2026-08-10):* base inicial, efectivo contado
+  y diferencia son concepto de **cierre por turno** (el cajón se cuenta al cerrar) y viven en el cuadre por
+  turno. El consolidado del día muestra solo **ventas + efectivo recaudado** (ventas efectivo + otros
+  ingresos − egresos). Mezclar ambos daría números engañosos (p. ej. sumar la base de un turno multi-día
+  en varios días). Ruta: `/admin/cuadre` (supervisor+) con CSV; lógica en `lib/caja/cuadreDiario.ts`.
+- **Tipos de visitante y tarifas editables desde admin** ✅ *(2026-08-10):* `/admin/tarifas` (solo admin)
+  crea/edita tipos y cambia tarifas con vigencia (nunca sobrescribe). Antes solo por `seed`.
+- **Buscador de manillas** ✅ *(2026-08-10):* `/admin/manillas` (supervisor+) por consecutivo o n.° de
+  venta; reimprimir/anular siguen a nivel venta (auditadas).
+- **Impresión de manilla — hardware y driver** ✅ *(2026-08-10):* el QR único va impreso **en la manilla
+  misma** (lo que se escanea en puerta). Compra definida: **Zebra ZD411d** (térmica directa, ZPL) +
+  manilla **Z-Band Splash 1"** (el parque tiene piscinas/chorros → media acuática; soporta inmersión).
+  El **tipo** de visitante va impreso **en texto** (no por color de manilla: un solo rollo blanco, sin
+  cambios de rollo que frenen la caja). Driver ZPL en `lib/impresion/zpl.ts` (QR magnificación 4), envío
+  por **Zebra Browser Print** desde el navegador del cajero (`lib/impresion/browserPrint.ts`); el SDK
+  propietario se instala aparte (ver `public/vendor/README-zebra.md`). **Pendiente:** conectar el equipo
+  físico cuando llegue.
+
 ### Marca
 - Logo: **Ranch Texas Express** (tema western). Paleta:
   - Marrón oscuro `#3B2416`
@@ -95,6 +118,8 @@ Registro de decisiones tomadas y pendientes. Fecha de referencia inicial: 2026-0
 - `roles`: enum fijo (5 roles) vs. tabla configurable de permisos. Arranca como enum.
 - Consecutivo de venta/manilla: ¿por caja, por día, global? (afecta reimpresión y facturación futura).
 - Hora de corte del "día operativo" para cuadre diario y export CSV (no medianoche UTC).
+  ✅ *Resuelto para el consolidado (2026-08-10):* corte a medianoche **America/Bogota** por fecha de
+  venta (`creado_en`). Pendiente definir si aplica el mismo criterio a otros reportes/exports.
 - Vencimiento de manilla: fin del día operativo; definir hora de corte exacta.
 - Almacenamiento de firmas de consentimiento e imágenes de soporte de gastos: volumen de Railway vs.
   almacenamiento externo (S3/UploadThing). Railway tiene filesystem efímero.
