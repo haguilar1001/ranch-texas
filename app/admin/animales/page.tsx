@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { obtenerSesion, tieneRol } from "@/lib/auth/sesion";
+import { obtenerSesion, tieneRol, puedeOperarGranja } from "@/lib/auth/sesion";
 import { formatearBase, costoCOP, type AlimentoUnidad } from "@/lib/animales/unidades";
 import { consumoBaseDiario, costoDiario, costoMensual, describirRacion, sugerenciaDeEntrega } from "@/lib/animales/racion";
 import { diasDeAutonomia } from "@/lib/animales/existencia";
@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export default async function AnimalesPage() {
   const s = await obtenerSesion();
   if (!s) redirect("/login");
-  if (!tieneRol(s.rol, "supervisor")) return <main className="p-6">Sin acceso.</main>;
+  if (!puedeOperarGranja(s.rol)) return <main className="p-6">Sin acceso.</main>;
 
   const desdeHoy = inicioDelDiaOperativo();
 
@@ -199,6 +199,7 @@ export default async function AnimalesPage() {
   return (
     <AnimalesClient
       esAdmin={tieneRol(s.rol, "administrador")}
+      esSupervisor={tieneRol(s.rol, "supervisor")}
       kpis={kpis}
       animales={animales}
       categorias={categoriasRaw.map((c) => ({ id: c.id, nombre: c.nombre }))}

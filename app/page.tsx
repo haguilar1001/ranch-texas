@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
-import { obtenerSesion, tieneRol } from "@/lib/auth/sesion";
+import { obtenerSesion, tieneRol, puedeOperarGranja } from "@/lib/auth/sesion";
 import { indicadoresVentas } from "@/lib/reportes/ventas";
 import { comparativoAnual } from "@/lib/reportes/comparativo";
 import { variacionPct, formatearVariacion } from "@/lib/reportes/util";
@@ -71,6 +71,8 @@ export default async function Home() {
     aforo = Math.max(0, e - sa);
   }
   const varAnual = variacionPct(comp.totalActual, comp.totalAnterior);
+  // El operario de granja entra al sistema pero no ve ingresos ni comparativos.
+  const verCifras = tieneRol(s.rol, "consulta");
 
   const operacion = ([
     ["🎟️", "Taquilla", "Vender manillas", "/taquilla", tieneRol(s.rol, "cajero")],
@@ -82,7 +84,7 @@ export default async function Home() {
     ["📊", "Ventas", "Indicadores, reportes y comparativos", "/admin/dashboard", tieneRol(s.rol, "consulta")],
     ["🎡", "Accesos y atracciones", "Atracciones, consentimiento, conteo diario", "/admin/accesos", tieneRol(s.rol, "consulta")],
     ["👷", "Personal", "Empleados, áreas y cargos", "/admin/personal", tieneRol(s.rol, "supervisor")],
-    ["🐄", "Animales", "Inventario, recintos y alimentación", "/admin/animales", tieneRol(s.rol, "supervisor")],
+    ["🐄", "Animales", "Inventario, ubicación y alimentación", "/admin/animales", puedeOperarGranja(s.rol)],
     ["🔧", "Equipos", "Inventario y mantenimientos", "/admin/equipos", tieneRol(s.rol, "supervisor")],
     ["🧾", "Gastos y P&G", "Rubros, presupuesto, resultado", "/admin/gastos", tieneRol(s.rol, "supervisor")],
     ["⚙️", "Administración", "Reportes y maestros", "/admin", tieneRol(s.rol, "consulta")],
@@ -118,15 +120,18 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* KPIs de hoy */}
+        {/* KPIs de hoy — solo para roles con acceso a reportes (granja no ve facturación). */}
+        {verCifras && (
         <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Kpi label="Ingreso hoy" valor={formatearCOP(ind.ingreso)} />
           <Kpi label="Entradas hoy" valor={String(ind.asistentes)} sub={`${ind.numVentas} ventas`} />
           <Kpi label="Ticket promedio" valor={formatearCOP(ind.ticketPromedio)} />
           <Kpi label="Aforo actual" valor={String(aforo)} sub={ep?.aforo_maximo ? `de ${ep.aforo_maximo}` : undefined} />
         </div>
+        )}
 
         {/* Comparativo anual mini */}
+        {verCifras && (
         <Link href="/admin/reportes/comparativo" className="mb-6 flex items-center justify-between rounded-2xl border-2 border-ranch-dorado bg-white p-4 shadow-sm hover:shadow-md">
           <div>
             <p className="text-xs uppercase tracking-wide text-ranch-marron/50">Venta {anio} vs {anio - 1}</p>
@@ -137,6 +142,7 @@ export default async function Home() {
             <p className="text-xs text-ranch-marron/50">vs {formatearCOP(comp.totalAnterior)}</p>
           </div>
         </Link>
+        )}
 
         {/* Menú — botones con iconos */}
         {operacion.length > 0 && (

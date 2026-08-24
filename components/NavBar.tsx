@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { obtenerSesion, tieneRol } from "@/lib/auth/sesion";
+import { obtenerSesion, tieneRol, puedeOperarGranja } from "@/lib/auth/sesion";
 import { logout } from "@/lib/auth/actions";
 import NavLinks from "./NavLinks";
 
@@ -17,7 +17,7 @@ export default async function NavBar() {
     ["Ventas", "/admin/dashboard", tieneRol(s.rol, "consulta")],
     ["Accesos", "/admin/accesos", tieneRol(s.rol, "consulta")],
     ["Personal", "/admin/personal", tieneRol(s.rol, "supervisor")],
-    ["Animales", "/admin/animales", tieneRol(s.rol, "supervisor")],
+    ["Animales", "/admin/animales", puedeOperarGranja(s.rol)],
     ["Equipos", "/admin/equipos", tieneRol(s.rol, "supervisor")],
     ["Gastos", "/admin/gastos", tieneRol(s.rol, "supervisor")],
     ["Tarifas", "/admin/tarifas", tieneRol(s.rol, "administrador")],

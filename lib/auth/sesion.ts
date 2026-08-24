@@ -27,11 +27,23 @@ export async function obtenerSesion(): Promise<SesionUsuario | null> {
   return leerToken(c.value);
 }
 
-const JERARQUIA = ["consulta", "control_acceso", "cajero", "supervisor", "administrador"];
+// `granja` va por DEBAJO de consulta a propósito: el operario de granja no debe ver
+// ventas, caja ni gastos. Su acceso al módulo de Animales se concede aparte, con
+// `puedeOperarGranja`, no por nivel jerárquico.
+const JERARQUIA = ["granja", "consulta", "control_acceso", "cajero", "supervisor", "administrador"];
 
 /** ¿El rol tiene al menos el nivel requerido? (administrador incluye todo). */
 export function tieneRol(rol: string, minimo: string): boolean {
   const a = JERARQUIA.indexOf(rol);
   const b = JERARQUIA.indexOf(minimo);
   return a >= 0 && b >= 0 && a >= b;
+}
+
+/**
+ * ¿Puede operar el módulo de Animales (alimentar, trasladar, ajustar el censo)?
+ * El operario de granja sí; de los demás roles, solo supervisor hacia arriba.
+ * Los MAESTROS (recintos, alimentos, dieta) siguen siendo de supervisor.
+ */
+export function puedeOperarGranja(rol: string): boolean {
+  return rol === "granja" || tieneRol(rol, "supervisor");
 }

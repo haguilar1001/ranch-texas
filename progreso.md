@@ -45,13 +45,19 @@ Responde a: *"la alimentación de los animales, ubicación, si es alimentación 
 - [x] **Validación contra la fuente**: la suma de las 11 raciones reales da **$5.357.000/mes**,
       idéntico al total de la infografía de consumo.
 
+Ajustes tras la revisión del responsable (2026-08-24):
+- [x] **Melaza por 20 kg** (no 40). Costo mensual igual ($312.000), consumo real corregido a 120 kg/mes.
+- [x] **Perros a `individual`, 800 g por animal al día.** Su costo pasa de $880.000 a **$660.000/mes** y
+      el total del parque a **$5.137.000/mes**; la diferencia de $220.000 contra la infografía es real.
+- [x] **Rol `granja`** (migración `20260824160000_rol_granja`): alimenta, traslada y recibe alimento,
+      pero **no ve ventas, caja, gastos ni el resumen de facturación del inicio**, ni toca los maestros
+      (recintos, alimentos, dieta) ni anula. Probado con un usuario real de ese rol.
+
 Pendiente (del responsable, ver `decisiones.md`):
-- **Lista real de recintos** del parque (hoy los 29 grupos están "sin ubicar").
-- Confirmar que **el bulto es de 40 kg** en todos los concentrados; la **Melaza** (líquida) es el
-  supuesto más débil.
-- Resolver la discrepancia **8 bultos/mes documentados vs. 800 g/animal** (Italcán) y el equivalente en
-  Súper Ternera, para pasar esas raciones a `individual`.
-- Definir si hace falta un **rol operativo de granja** (hoy la bitácora exige supervisor).
+- **Lista real de recintos** del parque — quedó de anexarla; hoy los 29 grupos están "sin ubicar".
+- Confirmar que **el bulto es de 40 kg** en los demás concentrados.
+- **Súper Ternera:** 8 bultos/mes a 1 kg/animal dan para ~11 animales, no los 3 del grupo "Terneros";
+  falta confirmar si también comen las 7 Terneras para pasarla a `individual`.
 
 ## F10 — Módulos operativos (BOCETO en revisión, datos inventados)
 

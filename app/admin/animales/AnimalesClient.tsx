@@ -50,6 +50,7 @@ export interface BitacoraVista {
 
 interface Props {
   esAdmin: boolean;
+  esSupervisor: boolean;
   kpis: {
     cabezas: number; grupos: number; sinUbicacion: number; recintos: number;
     costoDiario: number; costoMensual: number; entregasHoy: number; costoHoy: number;
@@ -106,7 +107,7 @@ export default function AnimalesClient(p: Props) {
     return r.ok;
   }
 
-  const comun = { busy, correr, esAdmin: p.esAdmin };
+  const comun = { busy, correr, esAdmin: p.esAdmin, esSupervisor: p.esSupervisor };
 
   return (
     <main className="mx-auto max-w-6xl p-4 sm:p-6">
@@ -154,6 +155,8 @@ export default function AnimalesClient(p: Props) {
 interface Comun {
   busy: boolean;
   esAdmin: boolean;
+  /** Los maestros (recintos, alimentos, dieta) son de supervisor; granja solo opera. */
+  esSupervisor: boolean;
   correr: (fn: () => Promise<{ ok: boolean; error?: string; aviso?: string }>, exito: string) => Promise<boolean>;
 }
 
@@ -364,13 +367,14 @@ function FilaAnimal({
 
 // ------------------------------------------------------------------ UBICACIÓN
 
-function Ubicacion({ busy, correr, recintos, animales }: Comun & { recintos: RecintoVista[]; animales: AnimalVista[] }) {
+function Ubicacion({ busy, correr, esSupervisor, recintos, animales }: Comun & { recintos: RecintoVista[]; animales: AnimalVista[] }) {
   const [nuevo, setNuevo] = useState({ nombre: "", tipo: "", ubicacion: "", capacidad: "", descripcion: "" });
   const [edicion, setEdicion] = useState<{ id: string; nombre: string; tipo: string; ubicacion: string; capacidad: string; descripcion: string } | null>(null);
   const sinUbicar = animales.filter((a) => !a.recinto_id);
 
   return (
     <>
+      {esSupervisor && (
       <section className={`mb-4 ${card} p-4`}>
         <h2 className="mb-3 font-bold text-ranch-marron">Nuevo recinto</h2>
         <div className="grid gap-3 sm:grid-cols-3">
@@ -388,6 +392,7 @@ function Ubicacion({ busy, correr, recintos, animales }: Comun & { recintos: Rec
           }}
         >Crear recinto</button>
       </section>
+      )}
 
       {sinUbicar.length > 0 && (
         <p className="mb-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
@@ -445,12 +450,14 @@ function Ubicacion({ busy, correr, recintos, animales }: Comun & { recintos: Rec
                           <button className={botonSec} onClick={() => setEdicion(null)}>Cancelar</button>
                         </>
                       ) : (
+                        esSupervisor && (
                         <>
                           <button className={botonSec} onClick={() => setEdicion({ id: r.id, nombre: r.nombre, tipo: r.tipo ?? "", ubicacion: r.ubicacion ?? "", capacidad: r.capacidad === null ? "" : String(r.capacidad), descripcion: r.descripcion ?? "" })}>Editar</button>
                           <button className={botonSec} disabled={busy} onClick={() => correr(() => cambiarEstadoRecinto(r.id, !r.activo), r.activo ? "Recinto desactivado." : "Recinto activado.")}>
                             {r.activo ? "Desactivar" : "Activar"}
                           </button>
                         </>
+                        )
                       )}
                     </div>
                   </td>
@@ -469,7 +476,7 @@ function Ubicacion({ busy, correr, recintos, animales }: Comun & { recintos: Rec
 
 // ------------------------------------------------------------------ ALIMENTOS
 
-function Alimentos({ busy, correr, alimentos }: Comun & { alimentos: AlimentoVista[] }) {
+function Alimentos({ busy, correr, esSupervisor, alimentos }: Comun & { alimentos: AlimentoVista[] }) {
   const [nuevo, setNuevo] = useState({ nombre: "", tipo: "", unidad_medida: "bulto", costo_unitario: "", equivalencia_g: "" });
   const [edicion, setEdicion] = useState<{ id: string; nombre: string; tipo: string; unidad_medida: string; costo_unitario: string; equivalencia_g: string } | null>(null);
   const [mov, setMov] = useState<{ id: string; tipo: string; cantidad: string; unidad: string; motivo: string; costo: string } | null>(null);
@@ -477,6 +484,7 @@ function Alimentos({ busy, correr, alimentos }: Comun & { alimentos: AlimentoVis
 
   return (
     <>
+      {esSupervisor && (
       <section className={`mb-4 ${card} p-4`}>
         <h2 className="mb-1 font-bold text-ranch-marron">Nuevo alimento</h2>
         <p className="mb-3 text-xs text-ranch-marron/55">
@@ -498,6 +506,7 @@ function Alimentos({ busy, correr, alimentos }: Comun & { alimentos: AlimentoVis
           }}
         >Crear alimento</button>
       </section>
+      )}
 
       {sinEquivalencia.length > 0 && (
         <p className="mb-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
@@ -524,7 +533,7 @@ function Alimentos({ busy, correr, alimentos }: Comun & { alimentos: AlimentoVis
               const moviendo = mov?.id === a.id;
               return (
                 <FilaAlimento
-                  key={a.id} a={a} busy={busy} correr={correr}
+                  key={a.id} a={a} busy={busy} correr={correr} esSupervisor={esSupervisor}
                   editando={editando} edicion={edicion} setEdicion={setEdicion}
                   moviendo={moviendo} mov={mov} setMov={setMov}
                 />
@@ -541,9 +550,9 @@ function Alimentos({ busy, correr, alimentos }: Comun & { alimentos: AlimentoVis
 }
 
 function FilaAlimento({
-  a, busy, correr, editando, edicion, setEdicion, moviendo, mov, setMov,
+  a, busy, correr, esSupervisor, editando, edicion, setEdicion, moviendo, mov, setMov,
 }: {
-  a: AlimentoVista; busy: boolean; correr: Comun["correr"];
+  a: AlimentoVista; busy: boolean; correr: Comun["correr"]; esSupervisor: boolean;
   editando: boolean;
   edicion: { id: string; nombre: string; tipo: string; unidad_medida: string; costo_unitario: string; equivalencia_g: string } | null;
   setEdicion: (v: { id: string; nombre: string; tipo: string; unidad_medida: string; costo_unitario: string; equivalencia_g: string } | null) => void;
@@ -593,9 +602,9 @@ function FilaAlimento({
               </>
             ) : (
               <>
-                <button className={botonSec} onClick={() => setEdicion({ id: a.id, nombre: a.nombre, tipo: a.tipo ?? "", unidad_medida: a.unidad_medida, costo_unitario: a.costo_unitario === null ? "" : String(a.costo_unitario), equivalencia_g: a.equivalencia_g === null ? "" : String(a.equivalencia_g) })}>Editar</button>
+                {esSupervisor && <button className={botonSec} onClick={() => setEdicion({ id: a.id, nombre: a.nombre, tipo: a.tipo ?? "", unidad_medida: a.unidad_medida, costo_unitario: a.costo_unitario === null ? "" : String(a.costo_unitario), equivalencia_g: a.equivalencia_g === null ? "" : String(a.equivalencia_g) })}>Editar</button>}
                 <button className={botonSec} onClick={() => setMov(moviendo ? null : { id: a.id, tipo: "entrada", cantidad: "", unidad: a.unidad_medida, motivo: "", costo: "" })}>Movimiento</button>
-                <button className={botonSec} disabled={busy} onClick={() => correr(() => cambiarEstadoAlimento(a.id, !a.activo), a.activo ? "Alimento desactivado." : "Alimento activado.")}>{a.activo ? "Desactivar" : "Activar"}</button>
+                {esSupervisor && <button className={botonSec} disabled={busy} onClick={() => correr(() => cambiarEstadoAlimento(a.id, !a.activo), a.activo ? "Alimento desactivado." : "Alimento activado.")}>{a.activo ? "Desactivar" : "Activar"}</button>}
               </>
             )}
           </div>
@@ -638,7 +647,7 @@ function FilaAlimento({
 // ------------------------------------------------------------------ DIETA
 
 function Dieta({
-  busy, correr, raciones, animales, categorias, alimentos,
+  busy, correr, esSupervisor, raciones, animales, categorias, alimentos,
 }: Comun & { raciones: RacionVista[]; animales: AnimalVista[]; categorias: { id: string; nombre: string }[]; alimentos: AlimentoVista[] }) {
   const [nueva, setNueva] = useState({ destino: "animal" as "animal" | "categoria", destino_id: "", alimento_id: "", cantidad: "", unidad: "kg", modo: "grupal", frecuencia: "diaria", horario: "", observaciones: "" });
   const [abierto, setAbierto] = useState(false);
@@ -649,10 +658,10 @@ function Dieta({
     <>
       <div className="mb-3 flex items-center justify-between">
         <h2 className="font-bold text-ranch-marron">Dieta ({raciones.filter((r) => r.activo).length} raciones activas)</h2>
-        <button onClick={() => setAbierto(!abierto)} className={botonSec}>{abierto ? "Cerrar" : "+ Nueva ración"}</button>
+        {esSupervisor && <button onClick={() => setAbierto(!abierto)} className={botonSec}>{abierto ? "Cerrar" : "+ Nueva ración"}</button>}
       </div>
 
-      {abierto && (
+      {abierto && esSupervisor && (
         <section className={`mb-4 ${card} p-4`}>
           <div className="grid gap-3 sm:grid-cols-3">
             <select className={input} value={nueva.destino} onChange={(e) => setNueva({ ...nueva, destino: e.target.value as "animal" | "categoria", destino_id: "" })}>
@@ -766,10 +775,12 @@ function Dieta({
                           <button className={botonSec} onClick={() => setEdicion(null)}>Cancelar</button>
                         </>
                       ) : (
+                        esSupervisor && (
                         <>
                           <button className={botonSec} onClick={() => setEdicion({ id: r.id, cantidad: String(r.cantidad), unidad: r.unidad, modo: r.modo, frecuencia: r.frecuencia, horario: r.horario ?? "" })}>Editar</button>
                           <button className={botonSec} disabled={busy} onClick={() => correr(() => cambiarEstadoRacion(r.id, !r.activo), r.activo ? "Ración desactivada." : "Ración activada.")}>{r.activo ? "Desactivar" : "Activar"}</button>
                         </>
+                        )
                       )}
                     </div>
                   </td>

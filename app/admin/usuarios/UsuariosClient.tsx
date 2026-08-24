@@ -11,6 +11,7 @@ const PERFILES: { value: string; label: string; desc: string }[] = [
   { value: "supervisor", label: "Supervisor", desc: "Anula, reimprime, reabre, cortesías, gastos" },
   { value: "cajero", label: "Cajero", desc: "Vende y cierra su caja" },
   { value: "control_acceso", label: "Control de acceso", desc: "Solo escanea accesos" },
+  { value: "granja", label: "Granja", desc: "Solo animales: alimentar y trasladar" },
   { value: "consulta", label: "Consulta", desc: "Solo reportes" },
 ];
 const labelRol = (v: string) => PERFILES.find((p) => p.value === v)?.label ?? v;

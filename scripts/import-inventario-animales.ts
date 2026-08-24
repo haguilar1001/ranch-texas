@@ -65,30 +65,33 @@ const ALIMENTOS: Array<[string, string, string, number | null, number | null]> =
   ["Conejina", "concentrado", "kg", 5_000, 1_000],
   ["Acuatilapia", "concentrado", "bulto", 152_500, BULTO_G], // ESTIMADO: 2 bultos = $305.000/mes (ajustar)
   ["Sal mineralizada", "suplemento", "bulto", 95_000, BULTO_G],
-  ["Melaza", "suplemento", "bulto", 52_000, BULTO_G], // presentación por confirmar (es líquida)
+  ["Melaza", "suplemento", "bulto", 52_000, 20_000], // CONFIRMADO: viene por 20 kg, no 40
 ];
 
 // Consumo mensual documentado. Se ata al GRUPO (animal) cuando existe, o a la
 // CATEGORÍA cuando el consumo es "en general".
 //
-// `modo` = grupal: la cantidad es el TOTAL del lote. Se deja grupal en TODAS porque la
-// infografía documenta el consumo mensual agregado (y así cuadra el $5.357.000/mes).
-// Donde la fuente además menciona una regla por cabeza ("800 g/animal") queda anotado en
-// la observación: al confirmarla con el responsable, esa ración se pasa a `individual`.
-// [alimento, cantidad, unidad, destino_animal | null, destino_categoria | null, modo, horario, obs]
+// `modo` = grupal: la cantidad es el TOTAL del lote; individual: es POR CABEZA y se
+// multiplica por el censo del grupo.
+// La mayoría queda grupal porque la infografía documenta el consumo mensual agregado.
+// Los Perros ya están confirmados en 800 g por animal al día (responsable, 2026-08-24).
+// PENDIENTE: Súper Ternera dice "1 kg/animal" y 8 bultos/mes; a 1 kg/día eso son ~11
+// animales, no los 3 del grupo "Terneros" (probablemente incluye las 7 Terneras).
+// [alimento, cantidad, unidad, destino_animal | null, destino_categoria | null, modo, frecuencia, horario, obs]
 type ModoRacionImport = "individual" | "grupal";
-const RACIONES: Array<[string, number, string, string | null, string | null, ModoRacionImport, string | null, string]> = [
-  ["Prepico Dorado", 9, "bulto", "Gallinas ponedoras", null, "grupal", null, "$720.000/mes"],
-  ["Leche 16", 15, "bulto", "Vacas", null, "grupal", null, "$1.275.000/mes"],
-  ["Sal mineralizada", 2, "bulto", "Vacas", null, "grupal", "consumo libre", "Consumo libre - $190.000/mes"],
-  ["Melaza", 6, "bulto", "Vacas", null, "grupal", "consumo libre", "Consumo libre - $312.000/mes"],
-  ["Italcán", 8, "bulto", "Perros", null, "grupal", null, "Regla en campo: 800 g/animal - $880.000/mes"],
-  ["Súper Ternera", 8, "bulto", "Terneros", null, "grupal", null, "Regla en campo: 1 kg/animal - $680.000/mes"],
-  ["Conejina", 15, "kg", "Conejos", null, "grupal", null, "500 g entre todos - $75.000/mes"],
-  ["Leche 16", 4, "bulto", "Cabras", null, "grupal", null, "5 kg diarios entre el lote - $340.000/mes"],
-  ["Acuatilapia", 2, "bulto", "Peces koi", null, "grupal", null, "ESTIMADO 2 bultos x $152.500 = $305.000/mes (ajustar)"],
-  ["Maíz Molido", 6, "bulto", null, "Aves de corral", "grupal", null, "Aves en general - parte de $580.000/mes"],
-  ["Prepico Dorado", 2, "bulto", null, "Aves de corral", "grupal", null, "Aves en general - parte de $580.000/mes"],
+type FrecRacionImport = "diaria" | "semanal" | "quincenal" | "mensual";
+const RACIONES: Array<[string, number, string, string | null, string | null, ModoRacionImport, FrecRacionImport, string | null, string]> = [
+  ["Prepico Dorado", 9, "bulto", "Gallinas ponedoras", null, "grupal", "mensual", null, "$720.000/mes"],
+  ["Leche 16", 15, "bulto", "Vacas", null, "grupal", "mensual", null, "$1.275.000/mes"],
+  ["Sal mineralizada", 2, "bulto", "Vacas", null, "grupal", "mensual", "consumo libre", "Consumo libre - $190.000/mes"],
+  ["Melaza", 6, "bulto", "Vacas", null, "grupal", "mensual", "consumo libre", "Consumo libre - $312.000/mes"],
+  ["Italcán", 800, "g", "Perros", null, "individual", "diaria", null, "CONFIRMADO 2026-08-24: 800 g por animal al día"],
+  ["Súper Ternera", 8, "bulto", "Terneros", null, "grupal", "mensual", null, "Regla en campo: 1 kg/animal - $680.000/mes"],
+  ["Conejina", 15, "kg", "Conejos", null, "grupal", "mensual", null, "500 g entre todos - $75.000/mes"],
+  ["Leche 16", 4, "bulto", "Cabras", null, "grupal", "mensual", null, "5 kg diarios entre el lote - $340.000/mes"],
+  ["Acuatilapia", 2, "bulto", "Peces koi", null, "grupal", "mensual", null, "ESTIMADO 2 bultos x $152.500 = $305.000/mes (ajustar)"],
+  ["Maíz Molido", 6, "bulto", null, "Aves de corral", "grupal", "mensual", null, "Aves en general - parte de $580.000/mes"],
+  ["Prepico Dorado", 2, "bulto", null, "Aves de corral", "grupal", "mensual", null, "Aves en general - parte de $580.000/mes"],
 ];
 
 async function upsertCategoria(nombre: string): Promise<string> {
@@ -147,10 +150,10 @@ async function main() {
 
   // Raciones (idempotente por alimento + destino)
   let racCreadas = 0;
-  for (const [alimento, cantidad, unidad, destAnimal, destCat, modo, horario, obs] of RACIONES) {
+  for (const [alimento, cantidad, unidad, destAnimal, destCat, modo, frecuencia, horario, obs] of RACIONES) {
     const animal_id = destAnimal ? animalIds[destAnimal] ?? null : null;
     const categoria_animal_id = destCat ? cats[destCat] ?? null : null;
-    const datos = { cantidad, unidad, modo, horario, frecuencia: "mensual" as const, observaciones: obs };
+    const datos = { cantidad, unidad, modo, frecuencia, horario, observaciones: obs };
     const existente = await prisma.racion.findFirst({
       where: { alimento_id: alim[alimento], animal_id, categoria_animal_id },
     });

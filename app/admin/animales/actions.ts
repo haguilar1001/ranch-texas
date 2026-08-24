@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { obtenerSesion, tieneRol } from "@/lib/auth/sesion";
+import { obtenerSesion, tieneRol, puedeOperarGranja } from "@/lib/auth/sesion";
 import { registrarAuditoria } from "@/lib/audit";
 import { aBase, costoCOP, type AlimentoUnidad } from "@/lib/animales/unidades";
 import { cantidadPorEntrega, type FrecuenciaRacion, type ModoRacion } from "@/lib/animales/racion";
@@ -17,10 +17,19 @@ interface Resultado {
 
 const RUTA = "/admin/animales";
 
+/** Maestros: recintos, alimentos y dieta. Decisiones de parámetro. */
 async function supervisor() {
   const s = await obtenerSesion();
   return s && tieneRol(s.rol, "supervisor") ? s : null;
 }
+
+/** Operación diaria: alimentar, trasladar, mover inventario de alimento. */
+async function granja() {
+  const s = await obtenerSesion();
+  return s && puedeOperarGranja(s.rol) ? s : null;
+}
+
+const SIN_PERMISO_GRANJA = "Tu rol no puede operar el módulo de Animales.";
 
 async function admin() {
   const s = await obtenerSesion();
@@ -159,8 +168,8 @@ const SEXOS = ["macho", "hembra", "desconocido"] as const;
 const ESTADOS_ANIMAL = ["activo", "enfermo", "cuarentena", "fallecido", "trasladado"] as const;
 
 export async function crearAnimal(e: EntradaAnimal): Promise<Resultado> {
-  const s = await supervisor();
-  if (!s) return { ok: false, error: "Necesitas rol de supervisor." };
+  const s = await granja();
+  if (!s) return { ok: false, error: SIN_PERMISO_GRANJA };
 
   const nombre = e.nombre?.trim();
   if (!nombre) return { ok: false, error: "El nombre del grupo o animal es obligatorio." };
@@ -204,8 +213,8 @@ export async function crearAnimal(e: EntradaAnimal): Promise<Resultado> {
 }
 
 export async function editarAnimal(id: string, cambios: Partial<EntradaAnimal> & { estado?: string }): Promise<Resultado> {
-  const s = await supervisor();
-  if (!s) return { ok: false, error: "Necesitas rol de supervisor." };
+  const s = await granja();
+  if (!s) return { ok: false, error: SIN_PERMISO_GRANJA };
 
   const antes = await prisma.animal.findUnique({ where: { id } });
   if (!antes) return { ok: false, error: "Grupo no encontrado." };
@@ -265,8 +274,8 @@ export async function trasladarAnimal(
   recintoDestinoId: string,
   opciones: { cantidad?: string | number; motivo?: string } = {},
 ): Promise<Resultado> {
-  const s = await supervisor();
-  if (!s) return { ok: false, error: "Necesitas rol de supervisor." };
+  const s = await granja();
+  if (!s) return { ok: false, error: SIN_PERMISO_GRANJA };
 
   const animal = await prisma.animal.findUnique({ where: { id: animalId } });
   if (!animal) return { ok: false, error: "Grupo no encontrado." };
@@ -411,8 +420,8 @@ export async function registrarMovimientoAlimento(e: {
   motivo?: string;
   costo?: string | number | null;
 }): Promise<Resultado> {
-  const s = await supervisor();
-  if (!s) return { ok: false, error: "Necesitas rol de supervisor." };
+  const s = await granja();
+  if (!s) return { ok: false, error: SIN_PERMISO_GRANJA };
 
   if (!TIPOS_MOV.includes(e.tipo as (typeof TIPOS_MOV)[number])) return { ok: false, error: "Tipo de movimiento no válido." };
   const tipo = e.tipo as (typeof TIPOS_MOV)[number];
@@ -602,8 +611,8 @@ export async function registrarAlimentacion(e: {
   empleado_id?: string | null;
   observaciones?: string | null;
 }): Promise<Resultado> {
-  const s = await supervisor();
-  if (!s) return { ok: false, error: "Necesitas rol de supervisor." };
+  const s = await granja();
+  if (!s) return { ok: false, error: SIN_PERMISO_GRANJA };
 
   const estado = ESTADOS_ALIM.includes(e.estado as (typeof ESTADOS_ALIM)[number])
     ? (e.estado as (typeof ESTADOS_ALIM)[number])

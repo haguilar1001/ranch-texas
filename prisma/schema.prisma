@@ -23,6 +23,7 @@ enum Rol {
   supervisor
   cajero
   control_acceso
+  granja // operario de granja: solo el módulo de Animales
   consulta
 }
 

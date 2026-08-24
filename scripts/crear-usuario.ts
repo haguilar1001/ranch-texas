@@ -4,10 +4,10 @@ import { hashPassword } from "../lib/auth/password";
 
 // Crea (o actualiza la contraseña de) un usuario. Idempotente por `usuario`.
 // Uso: tsx scripts/crear-usuario.ts <usuario> <password> [rol] [nombre]
-//   rol: administrador | supervisor | cajero | control_acceso | consulta  (por defecto administrador)
+//   rol: administrador | supervisor | cajero | control_acceso | granja | consulta  (por defecto administrador)
 
 const prisma = new PrismaClient();
-const ROLES = ["administrador", "supervisor", "cajero", "control_acceso", "consulta"];
+const ROLES = ["administrador", "supervisor", "cajero", "control_acceso", "granja", "consulta"];
 
 async function main() {
   const usuario = process.argv[2];

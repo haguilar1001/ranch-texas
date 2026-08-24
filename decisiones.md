@@ -142,19 +142,32 @@ Decisiones técnicas derivadas:
 - Verificado contra los datos reales: la suma de costos mensuales de las 11 raciones da
   **$5.357.000/mes**, idéntico al total de la infografía.
 
+**Respuestas del responsable (2026-08-24), ya aplicadas:**
+- **Melaza viene por 20 kg**, no 40 → `equivalencia_g = 20000`. Su costo mensual no cambia
+  ($312.000: 6 × $52.000); lo que cambia es el consumo real (120 kg/mes, no 240).
+- **Perros: 800 g por animal al día.** Esa es la regla buena, no el agregado mensual. La ración pasó a
+  `modo = individual`, `800 g`, `frecuencia = diaria`. Consecuencia: su costo baja de $880.000 a
+  **$660.000/mes** (800 g × 10 perros × 30 días = 240 kg = 6 bultos) y el total del parque queda en
+  **$5.137.000/mes**. La diferencia de $220.000 contra la infografía es real y queda a la vista.
+- **Rol operativo de granja: aprobado.** Ver abajo.
+
+**Rol `granja` (nuevo, 2026-08-24)**
+- Se agregó al enum `Rol` (migración `20260824160000_rol_granja`). Va **por debajo de `consulta`** en la
+  jerarquía a propósito: el operario **no ve ventas, caja, gastos ni el resumen de facturación del
+  inicio**. Su acceso al módulo de Animales se concede aparte con `puedeOperarGranja()`, no por nivel.
+- **Puede:** alimentar (bitácora), trasladar animales, crear/editar grupos y registrar movimientos de
+  alimento (recibir la compra).
+- **No puede:** tocar los maestros (recintos, alimentos, dieta) — eso sigue siendo de supervisor — ni
+  anular registros (administrador).
+
 **Por confirmar con el responsable:**
-- **El bulto se asumió de 40 kg** para todos los concentrados (estándar en Colombia). Si alguno viene
-  en otra presentación, cambia su consumo y su costo. La **Melaza** es líquida y quedó también como
-  bulto de 40 kg: es el supuesto más débil.
-- **Discrepancia individual vs. documentado.** La infografía dice 8 bultos/mes de Italcán para los
-  perros ($880.000), pero la regla de campo "800 g/animal × 10 perros" da 6 bultos/mes ($660.000).
-  Igual pasa con Súper Ternera (8 bultos/mes vs. 1 kg/animal × 3 terneros). Por eso **las 11 raciones
-  reales quedaron en `grupal`** con el total documentado, que es lo que cuadra con la factura; la regla
-  por cabeza quedó anotada en la observación. Al aclararlo se pasan a `individual`.
-- **No hay recintos reales cargados** (los 29 grupos están "sin ubicar"). Falta la lista de corrales,
-  establos, aviarios y estanques del parque con su capacidad.
-- **No existe un rol de granja.** Hoy la bitácora exige `supervisor`; si quien alimenta no es
-  supervisor, hay que crear un rol operativo.
+- **El bulto se asumió de 40 kg** para los demás concentrados (estándar en Colombia). Melaza ya
+  confirmada en 20 kg.
+- **Súper Ternera:** la fuente dice "1 kg/animal" y 8 bultos/mes. A 1 kg diario, 8 bultos/mes dan para
+  ~11 animales, pero el grupo "Terneros" tiene 3 cabezas: lo más probable es que ese concentrado también
+  se lo coman las 7 **Terneras**. Falta confirmar a qué grupos se les da para pasarla a `individual`.
+- **Lista real de recintos** — el responsable la va a anexar; hasta entonces los 29 grupos siguen
+  "sin ubicar".
 
 ## Decisiones técnicas a resolver en su fase
 - `roles`: enum fijo (5 roles) vs. tabla configurable de permisos. Arranca como enum.
