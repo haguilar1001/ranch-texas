@@ -829,14 +829,41 @@ enum EstadoAnimal {
   trasladado
 }
 
+// ¿La cantidad de la ración es por cabeza o el total que se entrega al lote?
+enum ModoRacion {
+  individual // cantidad POR ANIMAL → el consumo se multiplica por las cabezas del grupo
+  grupal // cantidad TOTAL para todo el lote/recinto, sin importar cuántas cabezas
+}
+
+// Período al que corresponde `Racion.cantidad`.
+enum FrecuenciaRacion {
+  diaria
+  semanal
+  quincenal
+  mensual
+}
+
+enum EstadoAlimentacion {
+  realizada
+  parcial
+  omitida
+}
+
+enum TipoMovimientoAlimento {
+  entrada // compra / donación / ingreso a bodega
+  salida // entrega a los animales (bitácora) o merma
+  ajuste // corrección de inventario por conteo físico
+}
+
 model CategoriaAnimal {
   id          String  @id @default(uuid())
   nombre      String // Aves, Equinos, Bovinos, Reptiles...
   descripcion String?
   activo      Boolean @default(true)
 
-  animales Animal[]
-  raciones Racion[]
+  animales       Animal[]
+  raciones       Racion[]
+  alimentaciones RegistroAlimentacion[]
 
   creado_en       DateTime @default(now())
   creado_por      String?
@@ -849,11 +876,16 @@ model CategoriaAnimal {
 model Recinto {
   id          String  @id @default(uuid())
   nombre      String // Corral 1, Establo, Aviario...
+  tipo        String? // corral, establo, aviario, estanque, jaula, potrero...
+  ubicacion   String? // zona del parque (granja, lago, zona norte...)
   descripcion String?
   capacidad   Int?
   activo      Boolean @default(true)
 
-  animales Animal[]
+  animales          Animal[]
+  traslados_origen  TrasladoAnimal[]       @relation("traslado_origen")
+  traslados_destino TrasladoAnimal[]       @relation("traslado_destino")
+  alimentaciones    RegistroAlimentacion[]
 
   creado_en       DateTime @default(now())
   creado_por      String?
@@ -868,7 +900,7 @@ model Animal {
   nombre           String
   codigo           String? // chapeta / identificador físico
   categoria_id     String
-  recinto_id       String?
+  recinto_id       String? // ubicación ACTUAL (el historial está en traslados_animal)
   cantidad         Int          @default(1) // headcount del grupo/lote (1 = individuo)
   especie          String?
   raza             String?
@@ -879,9 +911,11 @@ model Animal {
   observaciones    String?
   activo           Boolean      @default(true)
 
-  categoria CategoriaAnimal @relation(fields: [categoria_id], references: [id])
-  recinto   Recinto?        @relation(fields: [recinto_id], references: [id])
-  raciones  Racion[]
+  categoria      CategoriaAnimal        @relation(fields: [categoria_id], references: [id])
+  recinto        Recinto?               @relation(fields: [recinto_id], references: [id])
+  raciones       Racion[]
+  traslados      TrasladoAnimal[]
+  alimentaciones RegistroAlimentacion[]
 
   creado_en       DateTime @default(now())
   creado_por      String?
@@ -893,16 +927,44 @@ model Animal {
   @@map("animales")
 }
 
-model Alimento {
-  id             String  @id @default(uuid())
-  nombre         String
-  tipo           String? // concentrado, forraje, fruta, verdura...
-  unidad_medida  String  @default("kg") // kg, bulto, litro, unidad
-  costo_unitario Int? // COP por unidad_medida
-  existencia     Int? // stock actual (en unidad_medida)
-  activo         Boolean @default(true)
+// Historial de ubicación: cada movimiento de un grupo/animal entre recintos.
+model TrasladoAnimal {
+  id                 String   @id @default(uuid())
+  animal_id          String
+  recinto_origen_id  String? // null = primera ubicación asignada
+  recinto_destino_id String
+  cantidad           Int      @default(1) // cabezas trasladadas
+  fecha              DateTime @default(now())
+  motivo             String?
 
-  raciones Racion[]
+  animal          Animal   @relation(fields: [animal_id], references: [id])
+  recinto_origen  Recinto? @relation("traslado_origen", fields: [recinto_origen_id], references: [id])
+  recinto_destino Recinto  @relation("traslado_destino", fields: [recinto_destino_id], references: [id])
+
+  creado_en       DateTime @default(now())
+  creado_por      String?
+  actualizado_en  DateTime @updatedAt
+  actualizado_por String?
+
+  @@index([animal_id])
+  @@index([recinto_destino_id])
+  @@index([fecha])
+  @@map("traslados_animal")
+}
+
+model Alimento {
+  id              String  @id @default(uuid())
+  nombre          String
+  tipo            String? // concentrado, forraje, fruta, verdura...
+  unidad_medida   String  @default("kg") // unidad de COMPRA: bulto, kg, litro, unidad
+  costo_unitario  Int? // COP por unidad_medida
+  equivalencia_g  Int? // gramos (o ml) que trae una unidad de compra; null si es indivisible
+  existencia_base Int? // stock en unidad BASE (g/ml/unidad), recalculable desde movimientos
+  activo          Boolean @default(true)
+
+  raciones       Racion[]
+  movimientos    MovimientoAlimento[]
+  alimentaciones RegistroAlimentacion[]
 
   creado_en       DateTime @default(now())
   creado_por      String?
@@ -912,20 +974,25 @@ model Alimento {
   @@map("alimentos")
 }
 
-// Dieta: qué come una categoría (o un animal específico) y en qué cantidad.
+// Dieta (parámetro): qué come una categoría (o un animal/grupo específico), cuánto,
+// cada cuánto y si la cantidad es por cabeza (individual) o para todo el lote (grupal).
 model Racion {
-  id                  String  @id @default(uuid())
+  id                  String           @id @default(uuid())
   categoria_animal_id String?
   animal_id           String?
   alimento_id         String
-  cantidad            Int // en la unidad del alimento (o gramos, según convención)
-  unidad              String  @default("kg")
-  frecuencia          String  @default("diaria") // diaria, semanal...
+  cantidad            Int // en la unidad de abajo; entero (usar g para fracciones de kg)
+  unidad              String           @default("kg")
+  modo                ModoRacion       @default(grupal)
+  frecuencia          FrecuenciaRacion @default(diaria)
+  horario             String? // "6:00 a.m.", "mañana y tarde"...
   observaciones       String?
+  activo              Boolean          @default(true)
 
-  categoria CategoriaAnimal? @relation(fields: [categoria_animal_id], references: [id])
-  animal    Animal?          @relation(fields: [animal_id], references: [id])
-  alimento  Alimento         @relation(fields: [alimento_id], references: [id])
+  categoria      CategoriaAnimal?       @relation(fields: [categoria_animal_id], references: [id])
+  animal         Animal?                @relation(fields: [animal_id], references: [id])
+  alimento       Alimento               @relation(fields: [alimento_id], references: [id])
+  alimentaciones RegistroAlimentacion[]
 
   creado_en       DateTime @default(now())
   creado_por      String?
@@ -935,6 +1002,69 @@ model Racion {
   @@index([categoria_animal_id])
   @@index([animal_id])
   @@map("raciones")
+}
+
+// Bitácora: cada entrega real de alimento (o su omisión justificada).
+model RegistroAlimentacion {
+  id                  String             @id @default(uuid())
+  fecha               DateTime           @default(now()) // hora real de la entrega (UTC)
+  racion_id           String? // dieta que se estaba cumpliendo; null = entrega extraordinaria
+  animal_id           String?
+  categoria_animal_id String?
+  recinto_id          String?
+  alimento_id         String
+  cantidad_planeada   Int? // en unidad base (g/ml/unidad), calculada desde la ración
+  cantidad_entregada  Int // en unidad base (g/ml/unidad)
+  costo               Int? // COP de lo entregado, si el alimento tiene costo unitario
+  estado              EstadoAlimentacion @default(realizada)
+  motivo              String? // obligatorio si es parcial u omitida
+  empleado_id         String? // quién alimentó
+  usuario_id          String? // quién lo registró en el sistema
+  observaciones       String?
+  anulado             Boolean            @default(false)
+  motivo_anulacion    String?
+
+  racion     Racion?             @relation(fields: [racion_id], references: [id])
+  animal     Animal?             @relation(fields: [animal_id], references: [id])
+  categoria  CategoriaAnimal?    @relation(fields: [categoria_animal_id], references: [id])
+  recinto    Recinto?            @relation(fields: [recinto_id], references: [id])
+  alimento   Alimento            @relation(fields: [alimento_id], references: [id])
+  movimiento MovimientoAlimento?
+
+  creado_en       DateTime @default(now())
+  creado_por      String?
+  actualizado_en  DateTime @updatedAt
+  actualizado_por String?
+
+  @@index([fecha])
+  @@index([animal_id])
+  @@index([alimento_id])
+  @@index([recinto_id])
+  @@map("registros_alimentacion")
+}
+
+// Kardex del alimento. La existencia del alimento se recalcula desde aquí.
+model MovimientoAlimento {
+  id              String                 @id @default(uuid())
+  alimento_id     String
+  tipo            TipoMovimientoAlimento
+  cantidad_base   Int // entrada/salida: cantidad positiva. ajuste: NUEVO saldo contado
+  fecha           DateTime               @default(now())
+  motivo          String?
+  costo           Int? // COP del movimiento (compras)
+  alimentacion_id String?                @unique // salida generada por una entrega de la bitácora
+
+  alimento     Alimento              @relation(fields: [alimento_id], references: [id])
+  alimentacion RegistroAlimentacion? @relation(fields: [alimentacion_id], references: [id])
+
+  creado_en       DateTime @default(now())
+  creado_por      String?
+  actualizado_en  DateTime @updatedAt
+  actualizado_por String?
+
+  @@index([alimento_id])
+  @@index([fecha])
+  @@map("movimientos_alimento")
 }
 
 // ------------------------- EQUIPOS -------------------------

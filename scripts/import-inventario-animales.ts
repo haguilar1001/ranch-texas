@@ -52,34 +52,43 @@ const CENSO: Array<[string, number, string, string, string]> = [
 ];
 
 // ---------------------------------------------------------------- ALIMENTOS (imagen)
-// [nombre, tipo, unidad, costo_unitario COP por unidad]
-const ALIMENTOS: Array<[string, string, string, number | null]> = [
-  ["Prepico Dorado", "concentrado", "bulto", 80_000],
-  ["Leche 16", "concentrado", "bulto", 85_000],
-  ["Maíz Molido", "concentrado", "bulto", 70_000],
-  ["Italcán", "concentrado", "bulto", 110_000],
-  ["Súper Ternera", "concentrado", "bulto", 85_000],
-  ["Conejina", "concentrado", "kg", 5_000],
-  ["Acuatilapia", "concentrado", "bulto", 152_500], // ESTIMADO: 2 bultos = $305.000/mes (ajustar)
-  ["Sal mineralizada", "suplemento", "bulto", 95_000],
-  ["Melaza", "suplemento", "bulto", 52_000],
+// [nombre, tipo, unidad, costo_unitario COP por unidad, equivalencia en gramos por unidad]
+// La equivalencia permite convertir "800 g por perro" a bultos y calcular consumo y costo.
+// SUPUESTO a confirmar: el bulto es de 40 kg (estándar de concentrado en Colombia).
+const BULTO_G = 40_000;
+const ALIMENTOS: Array<[string, string, string, number | null, number | null]> = [
+  ["Prepico Dorado", "concentrado", "bulto", 80_000, BULTO_G],
+  ["Leche 16", "concentrado", "bulto", 85_000, BULTO_G],
+  ["Maíz Molido", "concentrado", "bulto", 70_000, BULTO_G],
+  ["Italcán", "concentrado", "bulto", 110_000, BULTO_G],
+  ["Súper Ternera", "concentrado", "bulto", 85_000, BULTO_G],
+  ["Conejina", "concentrado", "kg", 5_000, 1_000],
+  ["Acuatilapia", "concentrado", "bulto", 152_500, BULTO_G], // ESTIMADO: 2 bultos = $305.000/mes (ajustar)
+  ["Sal mineralizada", "suplemento", "bulto", 95_000, BULTO_G],
+  ["Melaza", "suplemento", "bulto", 52_000, BULTO_G], // presentación por confirmar (es líquida)
 ];
 
 // Consumo mensual documentado. Se ata al GRUPO (animal) cuando existe, o a la
 // CATEGORÍA cuando el consumo es "en general".
-// [alimento, cantidad, unidad, destino_animal | null, destino_categoria | null, obs]
-const RACIONES: Array<[string, number, string, string | null, string | null, string]> = [
-  ["Prepico Dorado", 9, "bulto", "Gallinas ponedoras", null, "$720.000/mes"],
-  ["Leche 16", 15, "bulto", "Vacas", null, "$1.275.000/mes"],
-  ["Sal mineralizada", 2, "bulto", "Vacas", null, "Consumo libre · $190.000/mes"],
-  ["Melaza", 6, "bulto", "Vacas", null, "Consumo libre · $312.000/mes"],
-  ["Italcán", 8, "bulto", "Perros", null, "800 g/animal · $880.000/mes"],
-  ["Súper Ternera", 8, "bulto", "Terneros", null, "1 kg/animal · $680.000/mes"],
-  ["Conejina", 15, "kg", "Conejos", null, "500 g entre todos · $75.000/mes"],
-  ["Leche 16", 4, "bulto", "Cabras", null, "5 kg diarios entre el lote · $340.000/mes"],
-  ["Acuatilapia", 2, "bulto", "Peces koi", null, "ESTIMADO 2 bultos × $152.500 = $305.000/mes (ajustar)"],
-  ["Maíz Molido", 6, "bulto", null, "Aves de corral", "Aves en general · parte de $580.000/mes"],
-  ["Prepico Dorado", 2, "bulto", null, "Aves de corral", "Aves en general · parte de $580.000/mes"],
+//
+// `modo` = grupal: la cantidad es el TOTAL del lote. Se deja grupal en TODAS porque la
+// infografía documenta el consumo mensual agregado (y así cuadra el $5.357.000/mes).
+// Donde la fuente además menciona una regla por cabeza ("800 g/animal") queda anotado en
+// la observación: al confirmarla con el responsable, esa ración se pasa a `individual`.
+// [alimento, cantidad, unidad, destino_animal | null, destino_categoria | null, modo, horario, obs]
+type ModoRacionImport = "individual" | "grupal";
+const RACIONES: Array<[string, number, string, string | null, string | null, ModoRacionImport, string | null, string]> = [
+  ["Prepico Dorado", 9, "bulto", "Gallinas ponedoras", null, "grupal", null, "$720.000/mes"],
+  ["Leche 16", 15, "bulto", "Vacas", null, "grupal", null, "$1.275.000/mes"],
+  ["Sal mineralizada", 2, "bulto", "Vacas", null, "grupal", "consumo libre", "Consumo libre - $190.000/mes"],
+  ["Melaza", 6, "bulto", "Vacas", null, "grupal", "consumo libre", "Consumo libre - $312.000/mes"],
+  ["Italcán", 8, "bulto", "Perros", null, "grupal", null, "Regla en campo: 800 g/animal - $880.000/mes"],
+  ["Súper Ternera", 8, "bulto", "Terneros", null, "grupal", null, "Regla en campo: 1 kg/animal - $680.000/mes"],
+  ["Conejina", 15, "kg", "Conejos", null, "grupal", null, "500 g entre todos - $75.000/mes"],
+  ["Leche 16", 4, "bulto", "Cabras", null, "grupal", null, "5 kg diarios entre el lote - $340.000/mes"],
+  ["Acuatilapia", 2, "bulto", "Peces koi", null, "grupal", null, "ESTIMADO 2 bultos x $152.500 = $305.000/mes (ajustar)"],
+  ["Maíz Molido", 6, "bulto", null, "Aves de corral", "grupal", null, "Aves en general - parte de $580.000/mes"],
+  ["Prepico Dorado", 2, "bulto", null, "Aves de corral", "grupal", null, "Aves en general - parte de $580.000/mes"],
 ];
 
 async function upsertCategoria(nombre: string): Promise<string> {
@@ -88,13 +97,20 @@ async function upsertCategoria(nombre: string): Promise<string> {
   return (await prisma.categoriaAnimal.create({ data: { nombre, creado_por: POR } })).id;
 }
 
-async function upsertAlimento(nombre: string, tipo: string, unidad: string, costo: number | null): Promise<string> {
+async function upsertAlimento(
+  nombre: string,
+  tipo: string,
+  unidad: string,
+  costo: number | null,
+  equivalencia: number | null,
+): Promise<string> {
   const found = await prisma.alimento.findFirst({ where: { nombre } });
+  const data = { tipo, unidad_medida: unidad, costo_unitario: costo, equivalencia_g: equivalencia };
   if (found) {
-    await prisma.alimento.update({ where: { id: found.id }, data: { tipo, unidad_medida: unidad, costo_unitario: costo, actualizado_por: POR } });
+    await prisma.alimento.update({ where: { id: found.id }, data: { ...data, actualizado_por: POR } });
     return found.id;
   }
-  return (await prisma.alimento.create({ data: { nombre, tipo, unidad_medida: unidad, costo_unitario: costo, creado_por: POR } })).id;
+  return (await prisma.alimento.create({ data: { ...data, nombre, creado_por: POR } })).id;
 }
 
 async function upsertAnimal(nombre: string, cantidad: number, categoria_id: string, especie: string, obs: string): Promise<string> {
@@ -125,21 +141,24 @@ async function main() {
 
   // Alimentos
   const alim: Record<string, string> = {};
-  for (const [nombre, tipo, unidad, costo] of ALIMENTOS) alim[nombre] = await upsertAlimento(nombre, tipo, unidad, costo);
+  for (const [nombre, tipo, unidad, costo, equiv] of ALIMENTOS) {
+    alim[nombre] = await upsertAlimento(nombre, tipo, unidad, costo, equiv);
+  }
 
   // Raciones (idempotente por alimento + destino)
   let racCreadas = 0;
-  for (const [alimento, cantidad, unidad, destAnimal, destCat, obs] of RACIONES) {
+  for (const [alimento, cantidad, unidad, destAnimal, destCat, modo, horario, obs] of RACIONES) {
     const animal_id = destAnimal ? animalIds[destAnimal] ?? null : null;
     const categoria_animal_id = destCat ? cats[destCat] ?? null : null;
+    const datos = { cantidad, unidad, modo, horario, frecuencia: "mensual" as const, observaciones: obs };
     const existente = await prisma.racion.findFirst({
       where: { alimento_id: alim[alimento], animal_id, categoria_animal_id },
     });
     if (existente) {
-      await prisma.racion.update({ where: { id: existente.id }, data: { cantidad, unidad, frecuencia: "mensual", observaciones: obs, actualizado_por: POR } });
+      await prisma.racion.update({ where: { id: existente.id }, data: { ...datos, actualizado_por: POR } });
     } else {
       await prisma.racion.create({
-        data: { alimento_id: alim[alimento], animal_id, categoria_animal_id, cantidad, unidad, frecuencia: "mensual", observaciones: obs, creado_por: POR },
+        data: { ...datos, alimento_id: alim[alimento], animal_id, categoria_animal_id, creado_por: POR },
       });
       racCreadas++;
     }

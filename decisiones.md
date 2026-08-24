@@ -114,6 +114,48 @@ Registro de decisiones tomadas y pendientes. Fecha de referencia inicial: 2026-0
   unidad/costo unitario de **Acuatilapia** (solo total $305.000/mes) y desglose de "Aves en general".
 - Carga idempotente con `npm run import:animales` (reemplaza los animales inventados de `seed:boceto`).
 
+### Alimentación y ubicación de animales (F11, 2026-08-24)
+Decisiones del responsable en la entrevista previa:
+- **Alcance:** dieta (parámetro) **+ bitácora diaria** de lo realmente entregado, con descuento de
+  existencia del alimento.
+- **Individual vs. grupal:** campo `modo` en cada ración. `individual` = la cantidad es **por cabeza**
+  y se multiplica por el censo del grupo (800 g × 10 perros = 8 kg/día); `grupal` = la cantidad es el
+  **total del lote**, sin importar cuántos sean. Era imprescindible: los datos reales mezclan las dos
+  formas ("800 g/animal" vs. "5 kg diarios entre el lote").
+- **Ubicación:** recinto actual en el animal **+ historial de traslados** (`traslados_animal`), con
+  fecha, origen, destino, cabezas y motivo. La capacidad del recinto **avisa pero no bloquea**.
+- **Captura:** formularios CRUD dentro de `/admin/animales` (antes era solo lectura).
+
+Decisiones técnicas derivadas:
+- **Nada de decimales.** Las cantidades de alimento se guardan como entero en **unidad base**
+  (gramos, mililitros o unidades), igual que el dinero se guarda en pesos enteros. `Alimento.equivalencia_g`
+  dice cuántos gramos trae una unidad de compra (bulto de 40 kg = 40000) y permite convertir entre
+  "800 g por perro" y "8 bultos al mes". Si el usuario escribe 0,8 kg se guarda como 800 g.
+- **Existencia recalculable.** `alimentos.existencia_base` nunca se escribe a mano: se recalcula desde
+  `movimientos_alimento` (entrada suma, salida resta, **ajuste fija el saldo** por conteo físico).
+  Misma regla que el total de venta frente a su detalle.
+- **Anular no borra:** el registro de alimentación se marca anulado y el kardex recibe un movimiento
+  de compensación. Anular es solo de administrador.
+- **Frecuencia** pasó de texto libre a enum (`diaria`, `semanal`, `quincenal`, `mensual`). El mes se
+  toma de **30 días**. La bitácora es diaria, así que una ración mensual se **prorratea al día**
+  (8 bultos/mes → 10,67 kg/día) para comparar planeado vs. entregado.
+- Verificado contra los datos reales: la suma de costos mensuales de las 11 raciones da
+  **$5.357.000/mes**, idéntico al total de la infografía.
+
+**Por confirmar con el responsable:**
+- **El bulto se asumió de 40 kg** para todos los concentrados (estándar en Colombia). Si alguno viene
+  en otra presentación, cambia su consumo y su costo. La **Melaza** es líquida y quedó también como
+  bulto de 40 kg: es el supuesto más débil.
+- **Discrepancia individual vs. documentado.** La infografía dice 8 bultos/mes de Italcán para los
+  perros ($880.000), pero la regla de campo "800 g/animal × 10 perros" da 6 bultos/mes ($660.000).
+  Igual pasa con Súper Ternera (8 bultos/mes vs. 1 kg/animal × 3 terneros). Por eso **las 11 raciones
+  reales quedaron en `grupal`** con el total documentado, que es lo que cuadra con la factura; la regla
+  por cabeza quedó anotada en la observación. Al aclararlo se pasan a `individual`.
+- **No hay recintos reales cargados** (los 29 grupos están "sin ubicar"). Falta la lista de corrales,
+  establos, aviarios y estanques del parque con su capacidad.
+- **No existe un rol de granja.** Hoy la bitácora exige `supervisor`; si quien alimenta no es
+  supervisor, hay que crear un rol operativo.
+
 ## Decisiones técnicas a resolver en su fase
 - `roles`: enum fijo (5 roles) vs. tabla configurable de permisos. Arranca como enum.
 - Consecutivo de venta/manilla: ¿por caja, por día, global? (afecta reimpresión y facturación futura).

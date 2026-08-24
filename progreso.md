@@ -15,6 +15,43 @@ Estado por fase. Se entrega una fase a la vez; no se avanza sin visto bueno del 
 | F8 | Vistas `analitica`, usuario read-only y export para Power BI | ✅ Completada |
 | F9 | Modo offline, respaldos, despliegue y manual de usuario | ✅ Completada |
 | F10 | Reorganización por módulos + maestros de operación (Atracciones, Personal, Animales, Equipos) | 🟡 Boceto en revisión |
+| F11 | Animales: alimentación (dieta individual/grupal + bitácora + kardex) y ubicación con historial | ✅ Completada (faltan datos reales de recintos) |
+
+## F11 — Alimentación y ubicación de animales (completada, verificada)
+
+Responde a: *"la alimentación de los animales, ubicación, si es alimentación individual o grupal"*.
+
+- [x] **Modo de ración `individual` / `grupal`** (`lib/animales/racion.ts`): individual multiplica la
+      cantidad por las cabezas del grupo; grupal es el total del lote. Frecuencia pasó a enum
+      (diaria/semanal/quincenal/mensual, mes de 30 días).
+- [x] **Unidades sin decimales** (`lib/animales/unidades.ts`): todo se guarda entero en unidad base
+      (g/ml/unidad). `Alimento.equivalencia_g` (bulto = 40.000 g) permite convertir entre "800 g por
+      perro" y "8 bultos al mes", y calcular costo en COP entero.
+- [x] **Ubicación con historial**: `recintos` con tipo, zona y capacidad; `traslados_animal` guarda
+      cada movimiento (origen, destino, cabezas, motivo, fecha). La capacidad **avisa, no bloquea**.
+- [x] **Bitácora de alimentación** (`registros_alimentacion`): quién alimentó, hora real, planeado vs.
+      entregado, estado (realizada/parcial/omitida con motivo obligatorio), costo de lo entregado.
+- [x] **Kardex del alimento** (`movimientos_alimento`): entrada/salida/ajuste. La existencia se
+      **recalcula** desde los movimientos, nunca se escribe a mano. Anular una entrega no borra:
+      genera movimiento de compensación (solo administrador).
+- [x] **CRUD completo** en `/admin/animales` con 5 pestañas (Inventario, Ubicación, Alimentos, Dieta,
+      Bitácora), auditoría y baja lógica. Antes era una lista de solo lectura.
+- [x] Migración `20260824120000_f11_alimentacion_ubicacion` escrita a mano para **no perder datos**
+      (`frecuencia` texto→enum con CAST, `existencia` renombrada a `existencia_base`). Drift cero.
+- [x] Importador real actualizado con equivalencias y modo (`npm run import:animales`).
+- [x] Verificado: **76 tests verdes** (17 nuevos), typecheck limpio, build OK (25 rutas), y probado en
+      navegador con datos reales: crear recinto → trasladar Perros (avisa exceso de capacidad) →
+      registrar entrega de 10,67 kg de Italcán ($29.343) → kardex en negativo avisado.
+- [x] **Validación contra la fuente**: la suma de las 11 raciones reales da **$5.357.000/mes**,
+      idéntico al total de la infografía de consumo.
+
+Pendiente (del responsable, ver `decisiones.md`):
+- **Lista real de recintos** del parque (hoy los 29 grupos están "sin ubicar").
+- Confirmar que **el bulto es de 40 kg** en todos los concentrados; la **Melaza** (líquida) es el
+  supuesto más débil.
+- Resolver la discrepancia **8 bultos/mes documentados vs. 800 g/animal** (Italcán) y el equivalente en
+  Súper Ternera, para pasar esas raciones a `individual`.
+- Definir si hace falta un **rol operativo de granja** (hoy la bitácora exige supervisor).
 
 ## F10 — Módulos operativos (BOCETO en revisión, datos inventados)
 

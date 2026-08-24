@@ -131,36 +131,44 @@ async function seedAnimales() {
     });
   }
 
-  const alimDef: Array<{ nombre: string; tipo: string; unidad: string; costo: number; stock: number }> = [
-    { nombre: "Concentrado equino", tipo: "concentrado", unidad: "bulto", costo: 95000, stock: 20 },
-    { nombre: "Heno / forraje", tipo: "forraje", unidad: "paca", costo: 28000, stock: 40 },
-    { nombre: "Maíz", tipo: "grano", unidad: "bulto", costo: 110000, stock: 15 },
-    { nombre: "Concentrado avícola", tipo: "concentrado", unidad: "bulto", costo: 88000, stock: 10 },
-    { nombre: "Sal mineralizada", tipo: "suplemento", unidad: "bulto", costo: 62000, stock: 8 },
-    { nombre: "Frutas y verduras", tipo: "fresco", unidad: "kg", costo: 3500, stock: 50 },
+  // `equiv` = gramos que trae una unidad de compra; `stock` está en unidades de compra.
+  const alimDef: Array<{ nombre: string; tipo: string; unidad: string; costo: number; stock: number; equiv: number }> = [
+    { nombre: "Concentrado equino", tipo: "concentrado", unidad: "bulto", costo: 95000, stock: 20, equiv: 40000 },
+    { nombre: "Heno / forraje", tipo: "forraje", unidad: "paca", costo: 28000, stock: 40, equiv: 20000 },
+    { nombre: "Maíz", tipo: "grano", unidad: "bulto", costo: 110000, stock: 15, equiv: 40000 },
+    { nombre: "Concentrado avícola", tipo: "concentrado", unidad: "bulto", costo: 88000, stock: 10, equiv: 40000 },
+    { nombre: "Sal mineralizada", tipo: "suplemento", unidad: "bulto", costo: 62000, stock: 8, equiv: 40000 },
+    { nombre: "Frutas y verduras", tipo: "fresco", unidad: "kg", costo: 3500, stock: 50, equiv: 1000 },
   ];
   const alim: Record<string, string> = {};
   for (const a of alimDef) {
     const x = await prisma.alimento.create({
-      data: { nombre: a.nombre, tipo: a.tipo, unidad_medida: a.unidad, costo_unitario: a.costo, existencia: a.stock, creado_por: POR },
+      data: {
+        nombre: a.nombre, tipo: a.tipo, unidad_medida: a.unidad, costo_unitario: a.costo,
+        equivalencia_g: a.equiv, existencia_base: a.stock * a.equiv, creado_por: POR,
+      },
+    });
+    // La existencia inicial también entra al kardex, para que sea recalculable.
+    await prisma.movimientoAlimento.create({
+      data: { alimento_id: x.id, tipo: "entrada", cantidad_base: a.stock * a.equiv, motivo: "Existencia inicial (seed)", creado_por: POR },
     });
     alim[a.nombre] = x.id;
   }
 
-  const racDef: Array<[string, string, number, string]> = [
-    // categoría, alimento, cantidad, unidad
-    ["Equinos", "Concentrado equino", 3, "kg"],
-    ["Equinos", "Heno / forraje", 5, "kg"],
-    ["Bovinos", "Heno / forraje", 8, "kg"],
-    ["Bovinos", "Sal mineralizada", 1, "kg"],
-    ["Aves de corral", "Concentrado avícola", 1, "kg"],
-    ["Aves de corral", "Maíz", 1, "kg"],
-    ["Caprinos", "Heno / forraje", 3, "kg"],
-    ["Porcinos", "Frutas y verduras", 4, "kg"],
+  const racDef: Array<[string, string, number, string, "individual" | "grupal", string]> = [
+    // categoría, alimento, cantidad, unidad, modo, horario
+    ["Equinos", "Concentrado equino", 3, "kg", "individual", "6:00 a.m. y 4:00 p.m."],
+    ["Equinos", "Heno / forraje", 5, "kg", "individual", "consumo libre"],
+    ["Bovinos", "Heno / forraje", 8, "kg", "individual", "consumo libre"],
+    ["Bovinos", "Sal mineralizada", 1, "kg", "grupal", "consumo libre"],
+    ["Aves de corral", "Concentrado avícola", 1, "kg", "grupal", "7:00 a.m."],
+    ["Aves de corral", "Maíz", 1, "kg", "grupal", "3:00 p.m."],
+    ["Caprinos", "Heno / forraje", 3, "kg", "individual", "6:00 a.m."],
+    ["Porcinos", "Frutas y verduras", 4, "kg", "grupal", "mediodía"],
   ];
-  for (const [cat, ali, cantidad, unidad] of racDef) {
+  for (const [cat, ali, cantidad, unidad, modo, horario] of racDef) {
     await prisma.racion.create({
-      data: { categoria_animal_id: cats[cat], alimento_id: alim[ali], cantidad, unidad, frecuencia: "diaria", creado_por: POR },
+      data: { categoria_animal_id: cats[cat], alimento_id: alim[ali], cantidad, unidad, modo, horario, frecuencia: "diaria", creado_por: POR },
     });
   }
   console.log(

@@ -1,0 +1,148 @@
+import { describe, it, expect } from "vitest";
+import { aBase, costoCOP, factorBase, formatearBase, type AlimentoUnidad } from "../lib/animales/unidades";
+import {
+  cantidadTotalPeriodo,
+  consumoBasePeriodo,
+  consumoBaseDiario,
+  consumoBaseMensual,
+  costoMensual,
+  cantidadPorEntrega,
+  sugerenciaDeEntrega,
+  describirRacion,
+  type RacionCalculo,
+} from "../lib/animales/racion";
+import { calcularExistencia, diasDeAutonomia, quedaEnNegativo } from "../lib/animales/existencia";
+
+// Alimentos reales del parque (infografía de consumo mensual).
+const ITALCAN: AlimentoUnidad = { unidad_medida: "bulto", equivalencia_g: 40_000, costo_unitario: 110_000 };
+const LECHE16: AlimentoUnidad = { unidad_medida: "bulto", equivalencia_g: 40_000, costo_unitario: 85_000 };
+const PREPICO: AlimentoUnidad = { unidad_medida: "bulto", equivalencia_g: 40_000, costo_unitario: 80_000 };
+const CONEJINA: AlimentoUnidad = { unidad_medida: "kg", equivalencia_g: 1_000, costo_unitario: 5_000 };
+const SIN_EQUIV: AlimentoUnidad = { unidad_medida: "bulto", equivalencia_g: null, costo_unitario: 90_000 };
+
+describe("unidades de alimento", () => {
+  it("convierte kg, g y libras a unidad base", () => {
+    expect(aBase(15, "kg", CONEJINA)).toBe(15_000);
+    expect(aBase(800, "g", ITALCAN)).toBe(800);
+    expect(aBase(2, "lb", CONEJINA)).toBe(1_000);
+  });
+
+  it("usa la equivalencia del alimento para su unidad de compra", () => {
+    expect(factorBase("bulto", ITALCAN)).toBe(40_000);
+    expect(aBase(9, "bulto", PREPICO)).toBe(360_000);
+  });
+
+  it("no inventa conversiones cuando falta la equivalencia", () => {
+    expect(factorBase("bulto", SIN_EQUIV)).toBeNull();
+    expect(aBase(3, "bulto", SIN_EQUIV)).toBeNull();
+    expect(costoCOP(1_000, SIN_EQUIV)).toBeNull();
+  });
+
+  it("calcula el costo en COP entero", () => {
+    expect(costoCOP(360_000, PREPICO)).toBe(720_000); // 9 bultos de gallinas ponedoras
+    expect(costoCOP(160_000, LECHE16)).toBe(340_000); // 4 bultos de las cabras
+    expect(costoCOP(15_000, CONEJINA)).toBe(75_000); // 15 kg de los conejos
+  });
+
+  it("formatea mostrando la presentación de compra", () => {
+    expect(formatearBase(8_000, ITALCAN)).toBe("8 kg (0,2 bultos)");
+    expect(formatearBase(800, ITALCAN)).toBe("800 g (0,02 bultos)");
+    expect(formatearBase(15_000, CONEJINA)).toBe("15 kg");
+  });
+});
+
+describe("ración individual vs. grupal", () => {
+  // Perros: "800 g por animal", 10 cabezas.
+  const perros: RacionCalculo = { cantidad: 800, unidad: "g", modo: "individual", frecuencia: "diaria" };
+  // Cabras: "5 kg diarios entre el lote", 12 cabezas.
+  const cabras: RacionCalculo = { cantidad: 5, unidad: "kg", modo: "grupal", frecuencia: "diaria" };
+
+  it("individual multiplica por el censo del grupo", () => {
+    expect(cantidadTotalPeriodo(perros, 10)).toBe(8_000);
+    expect(consumoBasePeriodo(perros, 10, ITALCAN)).toBe(8_000);
+  });
+
+  it("grupal NO multiplica por el censo", () => {
+    expect(cantidadTotalPeriodo(cabras, 12)).toBe(5);
+    expect(cantidadTotalPeriodo(cabras, 40)).toBe(5);
+    expect(consumoBasePeriodo(cabras, 12, LECHE16)).toBe(5_000);
+  });
+
+  it("un grupo sin cabezas no consume nada en modo individual", () => {
+    expect(cantidadTotalPeriodo(perros, 0)).toBe(0);
+    expect(consumoBaseDiario(perros, 0, ITALCAN)).toBe(0);
+  });
+
+  it("reparte la cantidad según la frecuencia", () => {
+    // 9 bultos AL MES para las gallinas ponedoras.
+    const ponedoras: RacionCalculo = { cantidad: 9, unidad: "bulto", modo: "grupal", frecuencia: "mensual" };
+    expect(consumoBasePeriodo(ponedoras, 96, PREPICO)).toBe(360_000);
+    expect(consumoBaseDiario(ponedoras, 96, PREPICO)).toBe(12_000); // 12 kg/día
+    expect(costoMensual(ponedoras, 96, PREPICO)).toBe(720_000);
+  });
+
+  it("escala a mes de 30 días una ración diaria individual", () => {
+    expect(consumoBaseMensual(perros, 10, ITALCAN)).toBe(240_000); // 240 kg = 6 bultos
+    expect(costoMensual(perros, 10, ITALCAN)).toBe(660_000);
+  });
+
+  it("lo que toca entregar HOY prorratea la ración mensual", () => {
+    // Perros: 8 bultos AL MES documentados → 10,67 kg por día, no 320 kg.
+    const perrosMes: RacionCalculo = { cantidad: 8, unidad: "bulto", modo: "grupal", frecuencia: "mensual" };
+    expect(cantidadPorEntrega(perrosMes, 10, ITALCAN)).toBe(10_667);
+    expect(sugerenciaDeEntrega(perrosMes, 10, ITALCAN)).toEqual({ cantidad: "10.67", unidad: "kg" });
+    // Una ración diaria pequeña se sugiere en gramos.
+    expect(sugerenciaDeEntrega(perros, 1, ITALCAN)).toEqual({ cantidad: "800", unidad: "g" });
+  });
+
+  it("describe la ración en texto claro", () => {
+    expect(describirRacion(perros)).toBe("800 g por cabeza · diaria");
+    expect(describirRacion(cabras)).toBe("5 kg al lote · diaria");
+  });
+});
+
+describe("existencia del alimento (kardex)", () => {
+  const d = (dia: number) => new Date(Date.UTC(2026, 7, dia));
+
+  it("suma entradas y resta salidas", () => {
+    expect(
+      calcularExistencia([
+        { tipo: "entrada", cantidad_base: 400_000, fecha: d(1) },
+        { tipo: "salida", cantidad_base: 8_000, fecha: d(2) },
+        { tipo: "salida", cantidad_base: 8_000, fecha: d(3) },
+      ]),
+    ).toBe(384_000);
+  });
+
+  it("el ajuste por conteo físico fija el saldo", () => {
+    expect(
+      calcularExistencia([
+        { tipo: "entrada", cantidad_base: 400_000, fecha: d(1) },
+        { tipo: "ajuste", cantidad_base: 350_000, fecha: d(5) },
+        { tipo: "salida", cantidad_base: 10_000, fecha: d(6) },
+      ]),
+    ).toBe(340_000);
+  });
+
+  it("ordena por fecha aunque lleguen desordenados", () => {
+    const desordenado = calcularExistencia([
+      { tipo: "salida", cantidad_base: 10_000, fecha: d(6) },
+      { tipo: "ajuste", cantidad_base: 350_000, fecha: d(5) },
+      { tipo: "entrada", cantidad_base: 400_000, fecha: d(1) },
+    ]);
+    expect(desordenado).toBe(340_000);
+  });
+
+  it("avisa cuando la entrega deja el inventario en negativo", () => {
+    expect(quedaEnNegativo(5_000, 8_000)).toBe(true);
+    expect(quedaEnNegativo(10_000, 8_000)).toBe(false);
+    expect(quedaEnNegativo(null, 8_000)).toBe(false); // sin inventario cargado no se bloquea
+  });
+
+  it("calcula los días de autonomía", () => {
+    expect(diasDeAutonomia(240_000, 8_000)).toBe(30);
+    expect(diasDeAutonomia(1_000, 8_000)).toBe(0);
+    expect(diasDeAutonomia(null, 8_000)).toBeNull();
+    expect(diasDeAutonomia(240_000, 0)).toBeNull();
+  });
+});
