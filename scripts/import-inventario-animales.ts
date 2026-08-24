@@ -74,9 +74,10 @@ const ALIMENTOS: Array<[string, string, string, number | null, number | null]> =
 // `modo` = grupal: la cantidad es el TOTAL del lote; individual: es POR CABEZA y se
 // multiplica por el censo del grupo.
 // La mayoría queda grupal porque la infografía documenta el consumo mensual agregado.
-// Los Perros ya están confirmados en 800 g por animal al día (responsable, 2026-08-24).
-// PENDIENTE: Súper Ternera dice "1 kg/animal" y 8 bultos/mes; a 1 kg/día eso son ~11
-// animales, no los 3 del grupo "Terneros" (probablemente incluye las 7 Terneras).
+// Confirmadas por el responsable (2026-08-24) como reglas POR CABEZA:
+//   - Perros: 800 g por animal al día.
+//   - Súper Ternera: 1 kg por animal al día, y se lo comen Terneros (3) Y Terneras (7),
+//     por eso son DOS raciones. Los 8 bultos/mes de la infografía eran el agregado.
 // [alimento, cantidad, unidad, destino_animal | null, destino_categoria | null, modo, frecuencia, horario, obs]
 type ModoRacionImport = "individual" | "grupal";
 type FrecRacionImport = "diaria" | "semanal" | "quincenal" | "mensual";
@@ -86,7 +87,8 @@ const RACIONES: Array<[string, number, string, string | null, string | null, Mod
   ["Sal mineralizada", 2, "bulto", "Vacas", null, "grupal", "mensual", "consumo libre", "Consumo libre - $190.000/mes"],
   ["Melaza", 6, "bulto", "Vacas", null, "grupal", "mensual", "consumo libre", "Consumo libre - $312.000/mes"],
   ["Italcán", 800, "g", "Perros", null, "individual", "diaria", null, "CONFIRMADO 2026-08-24: 800 g por animal al día"],
-  ["Súper Ternera", 8, "bulto", "Terneros", null, "grupal", "mensual", null, "Regla en campo: 1 kg/animal - $680.000/mes"],
+  ["Súper Ternera", 1, "kg", "Terneros", null, "individual", "diaria", null, "CONFIRMADO 2026-08-24: 1 kg por animal al día"],
+  ["Súper Ternera", 1, "kg", "Terneras", null, "individual", "diaria", null, "CONFIRMADO 2026-08-24: 1 kg por animal al día"],
   ["Conejina", 15, "kg", "Conejos", null, "grupal", "mensual", null, "500 g entre todos - $75.000/mes"],
   ["Leche 16", 4, "bulto", "Cabras", null, "grupal", "mensual", null, "5 kg diarios entre el lote - $340.000/mes"],
   ["Acuatilapia", 2, "bulto", "Peces koi", null, "grupal", "mensual", null, "ESTIMADO 2 bultos x $152.500 = $305.000/mes (ajustar)"],

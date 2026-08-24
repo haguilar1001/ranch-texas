@@ -52,12 +52,12 @@ Ajustes tras la revisión del responsable (2026-08-24):
 - [x] **Rol `granja`** (migración `20260824160000_rol_granja`): alimenta, traslada y recibe alimento,
       pero **no ve ventas, caja, gastos ni el resumen de facturación del inicio**, ni toca los maestros
       (recintos, alimentos, dieta) ni anula. Probado con un usuario real de ese rol.
+- [x] **Súper Ternera a `individual`**: lo comen Terneros (3) y Terneras (7) a 1 kg por cabeza al día →
+      dos raciones. Total del parque: **$5.094.500/mes** (12 raciones).
 
 Pendiente (del responsable, ver `decisiones.md`):
 - **Lista real de recintos** del parque — quedó de anexarla; hoy los 29 grupos están "sin ubicar".
 - Confirmar que **el bulto es de 40 kg** en los demás concentrados.
-- **Súper Ternera:** 8 bultos/mes a 1 kg/animal dan para ~11 animales, no los 3 del grupo "Terneros";
-  falta confirmar si también comen las 7 Terneras para pasarla a `individual`.
 
 ## F10 — Módulos operativos (BOCETO en revisión, datos inventados)
 

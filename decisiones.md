@@ -163,11 +163,15 @@ Decisiones técnicas derivadas:
 **Por confirmar con el responsable:**
 - **El bulto se asumió de 40 kg** para los demás concentrados (estándar en Colombia). Melaza ya
   confirmada en 20 kg.
-- **Súper Ternera:** la fuente dice "1 kg/animal" y 8 bultos/mes. A 1 kg diario, 8 bultos/mes dan para
-  ~11 animales, pero el grupo "Terneros" tiene 3 cabezas: lo más probable es que ese concentrado también
-  se lo coman las 7 **Terneras**. Falta confirmar a qué grupos se les da para pasarla a `individual`.
 - **Lista real de recintos** — el responsable la va a anexar; hasta entonces los 29 grupos siguen
   "sin ubicar".
+
+**Súper Ternera** ✅ *(confirmado 2026-08-24):* lo comen **Terneros (3) y Terneras (7)**, 1 kg por animal
+al día. Se partió en **dos raciones `individual`** (una por grupo), porque una ración apunta a un grupo o a
+una categoría, y "Bovinos" habría arrastrado vacas, toros y toretes. Resultado: 10 kg/día = $637.500/mes
+(antes $680.000 documentados). Con esto el total del parque queda en **$5.094.500/mes**; los $262.500 de
+diferencia contra la infografía son el efecto de reemplazar agregados por reglas por cabeza, y quedan a
+la vista para revisarlos contra las compras reales.
 
 ## Decisiones técnicas a resolver en su fase
 - `roles`: enum fijo (5 roles) vs. tabla configurable de permisos. Arranca como enum.
